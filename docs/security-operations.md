@@ -42,3 +42,9 @@
 - **トークンローテーション**: `ROTATE_JOBS_TOKEN=1 bash ~/phase3-run.sh`。n8nの実行履歴には、通信エラー時にAuthorizationヘッダーが残り得る点に注意（7日で自動削除）。
 - ネットワーク: `monitor-net`（172.31.0.0/24）はKumaとn8nのみ。python-jobsは `n8n_internal` のみで、Kumaからは到達不可。UFW追加なし。
 - 未対応: n8nのread-only rootfs、`cap_drop` 後の長期動作確認、外部AI APIキーの保管方式（n8n資格情報＋予算上限を承認後に設計）。
+
+### Phase 4（Open WebUI）追加分
+- UIは `127.0.0.1:8300` のみ（SSHトンネル）。サインアップは管理者作成後に閉じる（`owui-admin.sh lock-signup`）。新規は承認制（`DEFAULT_USER_ROLE=pending`）。テレメトリ等は無効。
+- 外部LLMのAPIキーは `secrets/<provider>.key`（600）→`.env`（600、生成物）。Git・チャット・ログに出さない。詳細・費用統制・失効手順は [ai-api-key-management.md](ai-api-key-management.md)。
+- 外部へ送信されるのは会話内容のみ。機密・個人情報を入力しない運用。プロバイダー側で月額ハードリミット・専用キーを設定してから登録する。
+- ネットワーク注意: コンテナに複数ネットワークを付けると既定経路・送信元IPが変わり、UFWの許可ルールに合わなくなる場合がある（Kumaで発生、`gw_priority`で解決）。

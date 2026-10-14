@@ -66,3 +66,8 @@ sudo systemctl daemon-reload
 - リストア試験は、n8nのDB整合性（`integrity_check`）、ワークフロー/資格情報件数、復元データでの使い捨てn8n起動（ネットワークなし）とCLIでのワークフロー読出しまで確認。
 - 実復旧時は、`n8n-data.tar` を `n8n_n8n-data` に戻し、`.env`（同じ `N8N_ENCRYPTION_KEY`）を `~/home-ai-lab/n8n/` に配置してから `docker compose up -d`。ボリューム内の所有者は uid 1000（node）。
 - 適用: `scripts/phase3-backup-update.sh`（スクリプト更新、バックアップ1回、リストア試験）。
+
+## Phase 4 での拡張（2026-10-15）
+- 対象に **Open WebUIデータ（`open-webui_open-webui-data`）** と、`~/home-ai-lab/open-webui/{.env,secrets/}`（APIキー。アーカイブごと暗号化）を追加（スクリプト更新済み、NUC上での実行は未実施）。
+- リストア試験は `webui.db` の整合性とユーザー数を確認。
+- 実復旧時は `owui-data.tar` を `open-webui_open-webui-data` に戻し、`.env` と `secrets/` を配置して `docker compose up -d`。

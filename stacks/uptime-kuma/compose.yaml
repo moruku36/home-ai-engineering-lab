@@ -12,8 +12,10 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"   # lets Kuma probe the NUC itself
     networks:
-      - default
-      - monitor      # shared with n8n so Kuma can probe http://n8n:5678/healthz
+      default:
+        gw_priority: 100     # keep the default route (and source IP) on 172.30.0.0/24 so the UFW rule for host:22 matches
+      monitor:
+        gw_priority: 0       # shared with n8n / open-webui so Kuma can probe them by name
     security_opt:
       - no-new-privileges:true
     mem_limit: 512m

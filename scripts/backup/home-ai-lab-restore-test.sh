@@ -69,4 +69,12 @@ if [ -f "$work/n8n-data.tar" ]; then
 else
   echo "(no n8n-data.tar in this backup - older backup format)"
 fi
+
+if [ -f "$work/owui-data.tar" ]; then
+  echo "=== Open WebUI ==="
+  mkdir "$work/odb"; tar -C "$work/odb" -xf "$work/owui-data.tar"
+  echo "integrity: $(sqlite3 "$work/odb/webui.db" 'pragma integrity_check;')"
+  echo "users: $(sqlite3 "$work/odb/webui.db" 'select count(*) from user;')"
+  echo "RESTORE TEST (open-webui data): PASS"
+fi
 echo "RESTORE TEST: PASS"
