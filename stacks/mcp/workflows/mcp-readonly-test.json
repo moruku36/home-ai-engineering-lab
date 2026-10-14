@@ -54,10 +54,54 @@
     },
     {
       "parameters": {
+        "method": "POST",
+        "url": "http://mcp-server:8080/mcp",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'tools/call', params: { name: 'list_reports', arguments: {} } }) }}",
+        "options": { "timeout": 15000, "response": { "response": { "neverError": true } } }
+      },
+      "id": "b2000000-0000-4000-8000-000000000005",
+      "name": "call list_reports",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "credentials": { "httpHeaderAuth": { "id": "mcptoken0000001", "name": "mcp token (n8n)" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://mcp-server:8080/mcp",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jsonrpc: '2.0', id: 4, method: 'tools/call', params: { name: 'read_report', arguments: { name: 'github-daily-latest.md' } } }) }}",
+        "options": { "timeout": 15000, "response": { "response": { "neverError": true } } }
+      },
+      "id": "b2000000-0000-4000-8000-000000000006",
+      "name": "call read_report (latest GitHub report)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [880, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "credentials": { "httpHeaderAuth": { "id": "mcptoken0000001", "name": "mcp token (n8n)" } }
+    },
+    {
+      "parameters": {
         "assignments": {
           "assignments": [
             { "id": "m1", "name": "tools", "value": "={{ $('tools/list').item.json.result ? $('tools/list').item.json.result.tools.map(t => t.name).join(', ') : 'ERROR: ' + JSON.stringify($('tools/list').item.json.error || $('tools/list').item.json) }}", "type": "string" },
-            { "id": "m2", "name": "server_time", "value": "={{ $json.result ? $json.result.content[0].text : 'ERROR: ' + JSON.stringify($json.error || $json) }}", "type": "string" }
+            { "id": "m2", "name": "server_time", "value": "={{ $('call server_time').item.json.result ? $('call server_time').item.json.result.content[0].text : 'ERROR' }}", "type": "string" },
+            { "id": "m3", "name": "reports", "value": "={{ $('call list_reports').item.json.result ? $('call list_reports').item.json.result.content[0].text : 'ERROR: ' + JSON.stringify($('call list_reports').item.json.error || $('call list_reports').item.json) }}", "type": "string" },
+            { "id": "m4", "name": "latest_report_first_lines", "value": "={{ $json.result && !$json.result.isError ? $json.result.content[0].text.split('\\n').slice(0, 12).join('\\n') : 'ERROR: ' + JSON.stringify($json.error || $json.result || $json) }}", "type": "string" }
           ]
         },
         "options": {}
@@ -66,13 +110,15 @@
       "name": "Summary",
       "type": "n8n-nodes-base.set",
       "typeVersion": 3.4,
-      "position": [660, 0]
+      "position": [1100, 0]
     }
   ],
   "connections": {
     "Manual Trigger": { "main": [[{ "node": "tools/list", "type": "main", "index": 0 }]] },
     "tools/list": { "main": [[{ "node": "call server_time", "type": "main", "index": 0 }]] },
-    "call server_time": { "main": [[{ "node": "Summary", "type": "main", "index": 0 }]] }
+    "call server_time": { "main": [[{ "node": "call list_reports", "type": "main", "index": 0 }]] },
+    "call list_reports": { "main": [[{ "node": "call read_report (latest GitHub report)", "type": "main", "index": 0 }]] },
+    "call read_report (latest GitHub report)": { "main": [[{ "node": "Summary", "type": "main", "index": 0 }]] }
   },
   "settings": { "executionOrder": "v1" },
   "active": false

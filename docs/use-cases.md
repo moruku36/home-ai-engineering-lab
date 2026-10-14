@@ -1,42 +1,54 @@
 # What can the lab do? / 何ができる？
 
-English first, Japanese below. "Status" is what was actually verified on 2026-10-15.
-英語が先、日本語が後。「状態」は2026-10-15時点で実際に確認できたことです。
+English first, Japanese below. "Status" is what was actually verified on 2026-10-15. / 英語が先、日本語が後。「状態」は2026-10-15時点で実際に確認できたことです。
 
 ## In one sentence / ひとことで
 
-**EN:** A quiet little box at home that runs your AI automations, gives AI a safe toolbox, watches itself, and backs itself up — while the big AI models stay in the cloud.
-**JA:** 自宅に置いた静かな小箱が、AIの自動化を動かし、AIに安全な道具箱を渡し、自分を監視し、自分でバックアップを取ります。大きなAIモデルはクラウド側に任せます。
+**EN:** A quiet little box at home that watches your GitHub projects every morning, tells you only when something really needs attention, watches itself, and backs itself up — without any paid AI service.
+**JA:** 自宅の静かな小箱が、毎朝あなたの GitHub プロジェクトの状況をまとめ、本当に対応が必要なときだけ知らせ、自分自身を監視し、自分でバックアップを取ります。有料の AI サービスは使いません。
 
 ## Use cases / ユースケース
 
 | Use case | EN: how it helps | JA: どう役立つか | Status / 状態 |
 |---|---|---|---|
-| **Watch a GitHub repo** | Fetch public repo metadata on demand or on a schedule and save a Markdown report; no write access needed. | 公開リポジトリの情報を手動／定期で取得し、Markdownで保存。書き込み権限は不要。 | ✅ Works (manual run). Scheduling not set up. / 手動実行で動作。定期実行は未設定 |
-| **Compare several LLMs** | One browser UI for OpenAI, Anthropic, Gemini and RunPod-hosted models. | 1つのブラウザUIで複数社のLLMを比較。 | 🟡 UI ready; **needs your API keys**. / UIは準備済み。**APIキーが必要** |
-| **Safe tools for AI (MCP)** | AI clients can call read-only tools through one authenticated, audited door instead of getting broad access. | AIには広い権限を渡さず、認証・監査つきの1つの入口から読み取り専用ツールだけ呼ばせる。 | ✅ From n8n · 🟡 Open WebUI not verified / n8nからは動作・Open WebUIは未検証 |
-| **Try OSS / MCP tools safely** | Run experiments in containers; delete them when done; your PC stays clean. | コンテナで試して捨てる。開発PCを汚さない。 | ✅ The pattern is in place (Compose stacks). / 仕組みは整備済み |
-| **Know when something breaks** | Uptime checks for SSH, n8n, Open WebUI, MCP and Kuma itself. | SSH・n8n・Open WebUI・MCP・Kuma自身の死活を監視。 | ✅ 5 monitors · ⬜ no notifications yet / 監視5件・通知は未設定 |
-| **Use an external GPU when needed** | Point Open WebUI at an authenticated RunPod OpenAI-compatible endpoint; start it only when you need it. | 必要な時だけ、認証つきRunPodのOpenAI互換エンドポイントを使う。 | ⬜ Not set up (costs money). / 未設定（課金あり） |
-| **Recover after a failure** | Daily encrypted backup and a tested restore. | 毎日の暗号化バックアップと、試験済みの復元手順。 | ✅ Local · ⬜ off-device copy missing / NUC内のみ・NUC外は未 |
+| **Morning GitHub overview** | One Markdown report: what changed, open PRs/issues, stale items, failed Actions, Dependabot (with a token), diff vs. yesterday. | 1枚のレポートで、更新・未対応PR/Issue・停滞・失敗Actions・Dependabot（トークン時）・前日差分を把握。 | ✅ run from n8n OK (109 repos) · ⬜ first 07:00 JST run not yet observed |
+| **Spot a broken CI quickly** | A failing default-branch Actions run turns the Kuma push monitor red. | デフォルトブランチのActions失敗でKumaのPush監視が赤になる。 | ✅ logic (fake-API tests) · ⬜ real failure not yet seen · ⬜ delivery needs a channel |
+| **Let an AI tool read the report safely** | Reports are served read-only through MCP (`list_reports`, `read_report`) with a token and audit log. | レポートをMCP経由で読み取り専用に提供（トークン＋監査ログ）。 | ✅ from n8n |
+| **Know when something breaks** | Kuma watches SSH, n8n, MCP and the collector; an external heartbeat can watch the whole NUC. | KumaがSSH・n8n・MCP・収集ジョブを監視。外部heartbeatでNUC全体も監視可能。 | ✅ detection · ⬜ notifications · ⬜ heartbeat not enabled |
+| **Recover after a failure** | Daily encrypted backup and a tested restore. | 毎日の暗号化バックアップと試験済みの復元。 | ✅ local · ⬜ off-device copy missing |
+| **Try OSS / tools safely** | Run experiments in containers and throw them away; your PC stays clean. | コンテナで試して捨てる。開発PCを汚さない。 | ✅ pattern in place |
+| *(Parked)* Chat with cloud LLMs | Open WebUI is stopped; no LLM API key, no cost. | Open WebUI は停止中。LLMのAPIキーなし・費用なし。 | ⏸ data kept; restart: [ops-runbook.md](ops-runbook.md) |
 
 ## Try it (after tunnelling in) / 試してみる（SSHトンネル接続後）
 
-1. **n8n** → open workflow **"GitHub repo metadata (read-only)"** → *Execute*. You should see `repo | stars | open issues | pushed`.
-   **n8n** で「GitHub repo metadata (read-only)」を開き *Execute*。リポジトリ名・スター数・Issue数・最終pushが表示されます。
-2. **n8n** → workflow **"MCP read-only test"** → *Execute*. You should see the tool list (`echo, server_time, list_reports, read_report`) and the server time.
-   **n8n** で「MCP read-only test」を実行。ツール一覧とサーバー時刻が表示されます。
-3. **Uptime Kuma** → the dashboard shows the monitors; stop a container and watch it turn red (intentional-failure test is *not* done yet).
-   **Uptime Kuma** のダッシュボードで監視状況を確認。（意図的な停止試験は未実施）
-4. **Open WebUI** → add an API key first with `owui-admin.sh set-key <provider>` (see [ai-api-key-management.md](ai-api-key-management.md)).
-   **Open WebUI** は、先に `owui-admin.sh set-key <provider>` でAPIキーを登録（[ai-api-key-management.md](ai-api-key-management.md) 参照）。
+1. **n8n** → workflow **"GitHub daily report (read-only)"** → *Execute*. You get `repos … | open issues … | open PRs … | critical …`. The report is written on the NUC.
+   **n8n** の「GitHub daily report (read-only)」を *Execute*。件数のサマリーが出て、レポートが NUC に保存されます。
+2. **n8n** → **"MCP read-only test"** → *Execute*. You see the tool list, the report list and the first lines of `github-daily-latest.md`.
+   **n8n** の「MCP read-only test」を実行。ツール一覧・レポート一覧・最新レポートの冒頭が見えます。
+3. **Uptime Kuma** → the dashboard shows all monitors (Open WebUI is paused on purpose).
+   **Uptime Kuma** で全監視を確認（Open WebUI は意図的に一時停止）。
+4. Look at a sample report: [samples/github-daily-sample.md](samples/github-daily-sample.md) (synthetic data). / サンプル（合成データ）：[samples/github-daily-sample.md](samples/github-daily-sample.md)
+
+> **EN:** Without a GitHub token the whole home IP shares 60 calls/hour, so a manual run soon after another can be *partial*; the report says so and the fuller report of the same day is kept.
+> **JA:** トークンなしでは家庭のIP全体で 60回/時を共有するため、続けて手動実行すると*部分的*になることがあります（レポートに明記。同日のより充実したレポートは残ります）。
+
+## What does it cost? / 費用
+
+| Item | Extra monthly cost |
+|---|---|
+| GitHub API (public, read-only; optional free token) | 0 |
+| LLM APIs | 0 (none used; Open WebUI stopped) |
+| Notification channel (e-mail/SMTP with your existing account) | 0 |
+| External heartbeat (free tier of a hosted check) | 0 (free tier; confirm current terms) |
+| Off-device backup | 0 with hardware/accounts you already have — **not set up yet** |
+| Electricity | not included (an idle NUC; measured load < 1 % CPU, 1.5 GiB RAM) |
 
 ## How to judge the value / 価値の測り方
 
-**EN:** After a month: hours of manual work saved, job success rate, outages, API cost, upkeep time. Stop services that are not used. If CPU inference is too slow, hand the work to an external GPU/API.
-**JA:** 1か月運用後に、手作業の削減時間・ジョブ成功率・障害・API費用・保守工数を評価。使わないサービスは止める。CPU推論が遅ければ外部GPU/APIに任せる。
+**EN:** After a month: did the morning report save you manual checking? How many alerts were real? How much upkeep did it need? Stop what you do not use.
+**JA:** 1か月後に、朝のレポートで手作業の確認が減ったか、通知のうち本物はいくつか、保守にどれだけかかったかを評価。使わないものは止める。
 
 ## What it deliberately does not do / 意図的にやらないこと
 
-- **EN:** run large local LLMs or GPU training; expose anything to the Internet without authentication; write to GitHub or other external services without explicit approval; run untrusted code (no self-hosted CI runner).
-- **JA:** 大規模ローカルLLM／GPU学習、認証なしのインターネット公開、明示承認なしの外部サービスへの書き込み、未信頼コードの実行（self-hosted CI Runnerなし）。
+- **EN:** run LLMs or GPU workloads; use paid APIs; write to GitHub or other external services (the collector only reads); expose anything to the Internet; run untrusted code (no self-hosted CI runner).
+- **JA:** LLM／GPU処理、有料APIの利用、GitHub等への書き込み（収集は読み取りのみ）、インターネット公開、未信頼コードの実行（self-hosted CI Runnerなし）。

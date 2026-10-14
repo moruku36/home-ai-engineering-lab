@@ -9,7 +9,7 @@
 | 一貫性 | 取得中だけKumaを停止（数秒）→ tar → 再開 |
 | 暗号化 | [age](https://github.com/FiloSottile/age) 公開鍵暗号。NUC上には**公開鍵（recipient）**でバックアップを暗号化。復号用の秘密鍵はNUC外（パスワードマネージャー等）にも保管 |
 | 保存先 | `/var/backups/home-ai-lab`（root:root, 700 / ファイル600）＋ `.sha256` |
-| スケジュール | systemd timer `home-ai-lab-backup.timer`、毎日 03:30（+最大10分のランダム遅延、`Persistent=true`） |
+| スケジュール | systemd timer `home-ai-lab-backup.timer`、毎日 03:30 UTC＝日本時間 12:30（+最大10分のランダム遅延、`Persistent=true`） |
 | 保持 | 最新7世代（`KEEP` 環境変数で変更）。古い世代は自動削除 |
 | 導入 | `scripts/phase2c-run.sh`（age/sqlite3導入、鍵生成、スクリプト・timer設置、初回バックアップ、リストア試験） |
 
@@ -74,3 +74,9 @@ sudo systemctl daemon-reload
 
 ## Phase 5 での拡張（2026-10-15）
 - 対象に **MCP監査ログ（`mcp_mcp-audit`）** と `~/home-ai-lab/mcp/.env`（MCPトークン。暗号化）を追加（スクリプト更新済み、NUC上での実行・復元試験は未実施）。
+
+## 運用基盤の改善フェーズでの変更（2026-10-15）
+- **重要な修正：** 旧スクリプトは毎回**全スタックを停止→全スタックを起動**していたため、意図的に停止した Open WebUI が夜間バックアップで勝手に再起動する不具合があった。現在は**バックアップ前に動いていたスタックだけ**を停止し、**同じものだけ**を起動する（停止中のスタックもボリュームはバックアップ対象）。実機で確認：実行後も Open WebUI は `Exited`。
+- 対象に **`jobs-state`**（GitHub 収集のスナップショット・アラート状態）を追加。復元試験は `jobs-state.tar` の中身も確認。
+- 復元試験の実績（2026-10-15 22:18 UTC のバックアップ、9.0MB）：Kuma（監視5件）・n8n（ワークフロー3件、DB 整合性 ok）・Open WebUI（`users: 1`）・MCP 監査ログ・GitHub 状態、全て PASS。
+- NUC外保存：未実施。選択肢は [offsite-backup-options.md](offsite-backup-options.md)。timer は **03:30 UTC（日本時間 12:30）**。

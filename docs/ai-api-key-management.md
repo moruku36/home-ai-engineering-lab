@@ -1,5 +1,7 @@
 # 外部AI APIの鍵管理と接続方式（Open WebUI）
 
+> ⏸ **2026-10-15: Open WebUI is stopped on purpose** (see [ops-runbook.md](ops-runbook.md)). This document describes how keys would be handled when it is started again; no LLM API key is registered and no paid LLM API is used. / **Open WebUI は意図的に停止中**です。再開時の鍵の扱いを説明する資料で、LLM API キーは未登録・有料 LLM API は使っていません。
+
 最終更新: 2026-10-15 JST。**状態: 構成は導入・検証済み。APIキーは未登録（鍵なし起動）。キーを使った実接続・課金を伴う実行は未実施。**
 
 ## 接続方式

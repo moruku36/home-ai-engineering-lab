@@ -79,3 +79,9 @@
   3. 必要な場合のみ履歴を書き換え（`git filter-repo`＋強制push）。**破壊的操作なので事前に明示承認を得る。** フォークやキャッシュに残る可能性に注意。
   4. `docs/build-progress.md` に経緯を記録（秘密そのものは書かない）。
 - **既知の残存リスク：** n8nの実行履歴は、HTTPリクエストが通信レベルで失敗した場合に `Authorization` ヘッダーを保持し得る（7日保持）。rootは `docker inspect` で環境変数の秘密を見られる。
+
+### 運用基盤の改善フェーズ（GitHub 監視）追加分 / GitHub monitoring (2026-10-15)
+- **EN:** The collector sends only `GET` requests to `api.github.com`, only for owners in `GITHUB_OWNERS` (`moruku36`). Any GitHub token must be a **fine-grained, read-only** token stored only in `~/home-ai-lab/n8n/.env` (600) via a hidden prompt (`jobs-admin.sh`); it is sent only to the GitHub API host and never written to reports, snapshots, logs or results (tested). Kuma push tokens are handled the same way.
+- **EN:** `python-jobs` joined `monitor-net` so it can reach Kuma's push endpoint; it still publishes no port and every call needs its bearer token. UFW, SSH and port exposure are unchanged. Reports are Markdown from public data; the MCP server reads them through a **read-only** mount.
+- **JA:** 収集は `api.github.com` への `GET` のみ、対象は `GITHUB_OWNERS`（`moruku36`）のみ。トークンは**読み取り専用の fine-grained** のみ、`.env`（600）に非表示入力で保存し、GitHub API 以外へは送らず、レポート・スナップショット・ログ・結果に書き出さない（テスト済み）。`python-jobs` は Kuma の push 先へ到達するため `monitor-net` に参加したが、公開ポートはなく、呼び出しにはトークンが必要。UFW・SSH・公開範囲は変更なし。
+- **Accepted risks / 許容しているリスク:** the Kuma push token only allows sending heartbeats; a monitor `down` push can be spoofed by anything that knows it (internal networks only). / push トークンは heartbeat の送信のみ可能（内部ネットワーク内に限る）。
