@@ -94,7 +94,8 @@ df -h
 | 鍵管理方式 | ✅（方式）/ ⬜（実鍵） | `owui-admin.sh`（非表示入力→`secrets/*.key`(600)→`.env`生成）。偽の鍵でスクリプトのロジックをローカル検証。実キーでの動作は**未検証** |
 | プロバイダー到達性 | ✅（鍵なし） | OpenAI/Anthropic 401、Gemini/RunPod 404（到達可） |
 | Kuma監視 | ✅ | `http://open-webui:8080/health` Up |
-| バックアップ | ✅（スクリプト更新）/ ⬜（実行） | Open WebUIデータ・`.env`・`secrets/` を対象に追加。**NUC上での実行・復元試験は未実施**（`phase3-backup-update.sh` を再実行） |
-| 管理者作成 / 実接続 | ⬜ | ユーザー操作・APIキー待ち |
+| バックアップ | ✅（スクリプト更新）/ ⬜（実行） | Open WebUIデータ・`.env`・`secrets/` を対象に追加。NUC上でバックアップ+復元試験PASS（ただし取得時点では管理者未作成で `users: 0`。管理者作成後の復元は未確認） |
+| 管理者作成 | ✅ | `onboarding` 解消を確認、`lock-signup` 済み（サインアップ無効）。**初回は未作成のまま閉じてしまい再オープンが必要だった** |
+| 実接続 | ⬜ | APIキー待ち |
 
 **発見した問題と対処**: Phase 3でKumaを `monitor-net` に接続した際、ホストへの経路の送信元が `monitor-net`(172.31.0.0/24)になりUFW許可（172.30.0.0/24→22）に合わず、**「NUC SSH (host)」監視が Phase 3 完了時点からDownだった（当時の報告で見落とし）**。Kumaの `gw_priority`（既定経路を172.30.0.0/24側へ固定）で修正（UFWは緩めない）。`scripts/fix-kuma-gw.sh`。

@@ -28,7 +28,7 @@
 - [ ] 外部AI API接続の基本構成（未着手。APIキー未提供のため、承認後に実施）
 - [ ] n8nのエラー通知先（Kuma通知と併せて設定）
 - [x] Open WebUI導入（v0.12.0-slim、`127.0.0.1:8300` のみ、API鍵なしで起動、テレメトリ無効、サインアップは管理者作成後に閉じる運用、Kuma監視 Up）
-- [ ] Open WebUI管理者アカウント作成と `lock-signup`（ユーザー操作待ち）
+- [x] Open WebUI管理者アカウント作成と `lock-signup`（2026-10-15 完了。初回は管理者未作成のままサインアップを閉じてしまい、`/api/config` の `onboarding` で未作成と判明 → 一時 `unlock-signup` → 作成 → 再度 `lock-signup`。管理者作成後のバックアップは翌03:30のtimer/次回手動実行で取得）
 - [ ] 外部LLM APIキー登録と実接続検証（OpenAI / Anthropic / Gemini / RunPod。キー未提供のため未検証。方式は docs/ai-api-key-management.md）
 - [ ] MCP/APIとGitHub連携
 
