@@ -1,6 +1,6 @@
 # 導入計画 / Installation & Migration Runbook
 
-> **未実施の計画**。NUCにコマンド実行や構成変更はしていません。
+> Phase 0〜1は実施済み。**Phase 2（Docker / Uptime Kuma / ローカルバックアップ）は実施・検証済み**（結果は末尾「Phase 2 実施結果」）。Phase 3以降は未着手の計画。
 
 ## Phase 0: 保全・調査
 1. ESXi管理UIにはアクセスできるが資格情報は不明。VMやデータストアの保存要否を判断する。
@@ -56,3 +56,16 @@ df -h
 - 読み取り専用ジョブ成功
 - 外部AI APIへの接続確認
 - NUC外バックアップの復元試験
+
+## Phase 2 実施結果（2026-10-15）
+| 項目 | 結果 | 備考 |
+|---|---|---|
+| Docker Engine / Compose | ✅ | 公式APT。`scripts/phase2a-docker.sh`。dockerグループ追加なし |
+| Uptime Kuma | ✅ | `stacks/uptime-kuma/compose.yaml`。`127.0.0.1:3001` のみ公開（UFW迂回回避）、SQLite、認証有効 |
+| ホストSSH監視 | ✅ | UFWが Docker→ホスト22 を遮断していたためDown。固定サブネット(172.30.0.0/24)からのTCP22のみ許可（`scripts/phase2b-ufw-docker-ssh.sh apply/rollback`）→Up |
+| 再起動試験 | ✅ | `scripts/reboot-test.sh`。SSH/UFW/Docker/Kuma自動復帰、DB保持 |
+| ローカル暗号化バックアップ＋リストア | ✅ | [backup-restore.md](backup-restore.md) |
+| NUC外バックアップ | ⬜ 保留 | 保存先未決定 |
+| Kuma通知 / 外部死活監視 | ⬜ 未実施 | |
+
+ロールバック: Kuma `docker compose down`（ボリューム保持）、UFWは `phase2b-ufw-docker-ssh.sh rollback`、Docker撤去はデータ確認後に別途承認。

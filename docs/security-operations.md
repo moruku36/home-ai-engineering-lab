@@ -26,3 +26,11 @@
 - 実搭載RAM/SSD
 - TLS・バックアップ先と保持期間
 - 将来の外部Webhook要否
+
+## 実装済みの設定（2026-10-15 時点）
+- **Docker公開ポート**: Dockerは公開ポートでUFWを迂回し得るため、管理UIは `127.0.0.1` バインドのみ（Kuma: `127.0.0.1:3001`）。アクセスはSSHトンネル（`ssh -N -L 3001:127.0.0.1:3001 <user>@<host>`）。Docker APIのTCP待ち受けなし。Dockerソケットはどのコンテナにもマウントしていない。
+- **コンテナ制限**: Kumaは `no-new-privileges`、メモリ512MB、pids 256、ログローテーション。`cap_drop` は未適用（今後の課題）。
+- **UFW**: 受信は192.168.3.0/24→22/tcp に加え、Kuma専用ネットワーク(172.30.0.0/24)→22/tcp のみ許可（ホストSSH死活監視用）。SSHは公開鍵認証のみのため、到達可能でも認証なしでは入れない。
+- **dockerグループ**: 未使用。`sudo docker` 運用。sudoersの恒久拡大なし（パスワード必須のまま）。
+- **バックアップ**: age公開鍵暗号。NUC上の暗号化はrecipient（公開鍵）のみで行い、秘密鍵（`/etc/home-ai-lab/backup-identity.key`）はroot 600＋NUC外にも保管。詳細は [backup-restore.md](backup-restore.md)。
+- **未対応**: NUC外保存、通知設定、`cap_drop`/read-only rootfs、Kuma自身停止時の外部検知。
