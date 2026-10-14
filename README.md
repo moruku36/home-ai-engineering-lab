@@ -57,12 +57,32 @@ flowchart TB
 
 | Phase | 内容 | 状態 |
 |---|---|---|
-| 0 | ESXi保全判断、RAM/SSD実機確認 | 未着手 |
-| 1 | Ubuntu Server、SSH鍵、ネットワーク、更新 | 未着手 |
+| 0 | ESXi消去判断（確定済）、RAM/SSD実機確認 | 進行中 (USB作成完了) |
+| 1 | Ubuntu Server導入、SSH疎通、ヘッドレス化 | 進行中 (実機作業待ち) |
 | 2 | Docker Compose、Uptime Kuma、バックアップ | 未着手 |
 | 3 | n8n、読み取り専用の自動化、監査ログ | 未着手 |
 | 4 | Open WebUI、外部推論APIへの疎通 | 未着手 |
 | 5 | MCP/API隔離実験、GitHub連携、必要ならGrafana | 未着手 |
+
+### ▶ 次の物理アクション（Phase 0 & 1 実機導入）
+> 詳細手順は [物理セットアップ＆Ubuntu Server導入ランブック](docs/physical-setup-guide.md) を参照。
+
+- [ ] **1. USBメモリの安全な取り外し（Windows PC）**
+  - Rufus書き込み完了（`READY`）後、Windowsタスクトレイから安全に取り外して抜去。
+- [ ] **2. NUCの物理配線**
+  - 有線LAN、HDMI（モニター）、USBキーボード、作成したUSBメモリを接続し、最後に電源を接続。
+- [ ] **3. 起動とUSBブート**
+  - 電源ON直後に **`F10` キーを連打**し、Boot MenuからUEFI USBを選択してEnter。
+- [ ] **4. 対話インストールの進行（重要ポイント）**
+  - **ストレージ設定**: `Use an entire disk` を選択（既存ESXiの完全消去・上書き）。
+  - **ネットワーク**: 画面に表示される割り当てIPv4アドレス（例: `192.168.x.x`）をメモ。
+  - **SSH設定**: `[X] Install OpenSSH server` に必ずチェックを入れる（スペースキー）。
+- [ ] **5. インストール完了・USB抜去・再起動**
+  - 画面の `Please remove the installation medium...` 指示でUSBを抜いてEnter。
+- [ ] **6. 自宅Windows PCからのSSH接続確認**
+  - PowerShellから `ssh <ユーザー名>@<メモしたNUCのIP>` でログイン確認。
+- [ ] **7. ヘッドレス常設化**
+  - 接続確認後、モニターとキーボードを取り外し、電源＋有線LANの2本で常設稼働へ。
 
 ## 原則
 1. 既存ESXiのデータ確認前に破壊的操作をしない。
