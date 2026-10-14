@@ -1,6 +1,6 @@
 # Home AI Engineering Lab / 自宅AIエンジニアリングラボ
 
-> Status: **Ubuntu / SSH / UFW deployed; Docker unverified** — 2026-10-15 JST
+> Status: **Phase 2 (Docker / Uptime Kuma / local encrypted backup) deployed and verified; off-device backup pending** — 2026-10-15 JST
 
 Intel NUC 11 Performance を、クラウドAI・GPU・GitHubと連携する常設AI開発・運用基盤として再利用するプロジェクト。**GPU搭載のLLM計算機ではなく、AIワークフローを実行・連携・観測するコントロールプレーン**とする。
 
@@ -54,6 +54,8 @@ flowchart TB
 - [導入・移行ランブック](docs/implementation-plan.md)
 - [物理セットアップ＆Ubuntu Server導入ランブック](docs/physical-setup-guide.md)
 - [セキュリティ・運用](docs/security-operations.md)
+- [バックアップ・リストア手順](docs/backup-restore.md)
+- Composeスタック: [`stacks/`](stacks/)、運用スクリプト: [`scripts/`](scripts/)
 - [利用シナリオと検証基準](docs/use-cases.md)
 
 ## フェーズ・進捗（2026-10-15）
@@ -62,7 +64,7 @@ flowchart TB
 |---|---|---|
 | 0 | ハードウェア確認、ESXiからの移行 | ✅ 完了 |
 | 1 | Ubuntu Server、WindowsからSSH、UFW、SSH認証強化 | ✅ ほぼ完了（鍵限定の再接続テスト未確認） |
-| 2 | Docker Compose、Uptime Kuma、バックアップ | ⬜ 未完了（Docker導入状況未確認） |
+| 2 | Docker Compose、Uptime Kuma、バックアップ | 🟨 ほぼ完了（Docker・Kuma・再起動試験・ローカル暗号化バックアップ/リストア試験は合格。**NUC外バックアップ保存は保留**） |
 | 3 | n8n、読み取り専用自動化 | ⬜ 未着手 |
 | 4 | Open WebUI、外部AI API | ⬜ 未着手 |
 | 5 | MCP/API、GitHub連携 | ⬜ 未着手 |
