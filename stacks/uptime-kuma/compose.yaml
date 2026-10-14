@@ -1,4 +1,4 @@
-# Uptime Kuma — LAN/SSH-tunnel only. Port is bound to loopback so Docker's
+# Uptime Kuma - LAN/SSH-tunnel only. Port is bound to loopback so Docker's
 # iptables rules cannot expose it past UFW. Access: ssh -L 3001:127.0.0.1:3001
 services:
   uptime-kuma:
@@ -11,6 +11,12 @@ services:
       - uptime-kuma-data:/app/data
     extra_hosts:
       - "host.docker.internal:host-gateway"   # lets Kuma probe the NUC itself
+    networks:
+      default:
+        gw_priority: 100     # keep the default route (and source IP) on 172.30.0.0/24 so the UFW rule for host:22 matches
+      monitor:
+        gw_priority: 0       # shared with n8n / open-webui so Kuma can probe them by name
+      mcp: {}                # internal-only network: Kuma may only probe http://mcp-server:8080/healthz
     security_opt:
       - no-new-privileges:true
     mem_limit: 512m
@@ -24,6 +30,12 @@ networks:
     ipam:
       config:
         - subnet: 172.30.0.0/24   # pinned so the UFW rule for host:22 stays valid
+  monitor:
+    external: true
+    name: monitor-net
+  mcp:
+    external: true
+    name: mcp-net
 
 volumes:
   uptime-kuma-data:

@@ -1,0 +1,45 @@
+# Open WebUI - loopback-only (SSH tunnel). No local inference; external LLM APIs only.
+# Provider keys are NOT in this file or in Git: ./owui-admin.sh renders them into ./.env (chmod 600)
+# from ./secrets/<provider>.key. See docs/ai-api-key-management.md.
+name: open-webui
+services:
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:v0.12.0-slim
+    container_name: open-webui
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8300:8080"
+    env_file: .env          # WEBUI_SECRET_KEY, ENABLE_SIGNUP, rendered provider URLs/keys
+    environment:
+      WEBUI_NAME: Home AI Lab
+      WEBUI_AUTH: "true"
+      DEFAULT_USER_ROLE: pending            # new accounts need admin approval
+      ENABLE_PERSISTENT_CONFIG: "false"     # env/.env is the single source of truth (declarative, rotate by editing secrets)
+      ENABLE_OLLAMA_API: "false"            # no local models
+      ENABLE_COMMUNITY_SHARING: "false"
+      ENABLE_VERSION_UPDATE_CHECK: "false"
+      ANONYMIZED_TELEMETRY: "false"
+      DO_NOT_TRACK: "true"
+      SCARF_NO_ANALYTICS: "true"
+      TZ: Asia/Tokyo
+    volumes:
+      - open-webui-data:/app/backend/data
+    networks: [default, monitor, mcp]      # mcp: client of the internal read-only MCP server
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    mem_limit: 2g
+    pids_limit: 512
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  monitor:
+    external: true
+    name: monitor-net      # shared with Uptime Kuma (probe http://open-webui:8080/health)
+  mcp:
+    external: true
+    name: mcp-net          # internal-only network created by scripts/phase5-run.sh
+
+volumes:
+  open-webui-data:

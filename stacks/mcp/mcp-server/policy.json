@@ -1,0 +1,14 @@
+{
+  "clients": {
+    "n8n": {
+      "token_env": "MCP_TOKEN_N8N",
+      "tools": ["echo", "server_time", "list_reports", "read_report"],
+      "rate_per_min": 60
+    },
+    "openwebui": {
+      "token_env": "MCP_TOKEN_OPENWEBUI",
+      "tools": ["echo", "server_time", "list_reports"],
+      "rate_per_min": 30
+    }
+  }
+}

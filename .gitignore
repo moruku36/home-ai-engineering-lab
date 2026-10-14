@@ -9,3 +9,8 @@ backups/
 data/
 __pycache__/
 .DS_Store
+.env
+*.env
+!.env.example
+secrets/
+stacks/open-webui/config/

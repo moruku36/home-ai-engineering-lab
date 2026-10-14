@@ -1,0 +1,75 @@
+# n8n + Python job runner. n8n UI is loopback-only (access via SSH tunnel).
+# Secrets live in ./.env (chmod 600, never committed) - see .env.example.
+name: n8n
+services:
+  n8n:
+    image: n8nio/n8n:2.43.5
+    container_name: n8n
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5678:5678"
+    environment:
+      N8N_ENCRYPTION_KEY: ${N8N_ENCRYPTION_KEY:?set in .env}
+      N8N_HOST: localhost
+      N8N_PORT: "5678"
+      N8N_PROTOCOL: http
+      N8N_EDITOR_BASE_URL: http://localhost:5678
+      WEBHOOK_URL: http://localhost:5678/
+      GENERIC_TIMEZONE: Asia/Tokyo
+      TZ: Asia/Tokyo
+      N8N_DEFAULT_LOCALE: ja
+      N8N_DIAGNOSTICS_ENABLED: "false"
+      N8N_VERSION_NOTIFICATIONS_ENABLED: "false"
+      N8N_TEMPLATES_ENABLED: "false"
+      N8N_PERSONALIZATION_ENABLED: "false"
+      N8N_PUBLIC_API_DISABLED: "true"
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "true"
+      NODES_EXCLUDE: '["n8n-nodes-base.executeCommand","n8n-nodes-base.readWriteFile","n8n-nodes-base.localFileTrigger"]'
+      EXECUTIONS_DATA_PRUNE: "true"
+      EXECUTIONS_DATA_MAX_AGE: "168"     # hours (7 days)
+      EXECUTIONS_DATA_PRUNE_MAX_COUNT: "2000"
+    volumes:
+      - n8n-data:/home/node/.n8n
+    networks: [internal, monitor, mcp]     # mcp: client of the internal read-only MCP server
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    mem_limit: 1g
+    pids_limit: 512
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  python-jobs:
+    build: ./python-jobs
+    image: home-ai-lab/python-jobs:1
+    container_name: python-jobs
+    restart: unless-stopped
+    # No published ports: reachable only from n8n over the internal network.
+    environment:
+      JOBS_TOKEN: ${JOBS_TOKEN:?set in .env}
+      ALLOWED_REPOS: ${ALLOWED_REPOS:-}
+    volumes:
+      - jobs-reports:/data/reports
+    networks: [internal]
+    read_only: true
+    tmpfs: ["/tmp:size=16m"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    mem_limit: 256m
+    pids_limit: 64
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  internal: {}
+  monitor:
+    external: true
+    name: monitor-net      # created by scripts/phase3-run.sh; shared with Uptime Kuma
+  mcp:
+    external: true
+    name: mcp-net          # internal-only network created by scripts/phase5-run.sh
+
+volumes:
+  n8n-data:
+  jobs-reports:

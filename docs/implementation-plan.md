@@ -69,3 +69,45 @@ df -h
 | Kuma通知 / 外部死活監視 | ⬜ 未実施 | |
 
 ロールバック: Kuma `docker compose down`（ボリューム保持）、UFWは `phase2b-ufw-docker-ssh.sh rollback`、Docker撤去はデータ確認後に別途承認。
+
+## Phase 3 実施結果（2026-10-15）
+| 項目 | 結果 | 備考 |
+|---|---|---|
+| n8n（`stacks/n8n`） | ✅ | n8n 2.43.5。`127.0.0.1:5678` のみ。SSHトンネル経由。`.env`（chmod 600）に暗号化キー/トークン。実行履歴は7日で自動削除。Execute Command等のノードを無効化、公開APIと環境変数アクセスを無効化 |
+| Pythonジョブ（`python-jobs`） | ✅ | 内部ネットワークのみ・公開ポートなし。read-only rootfs、cap_drop ALL、非root、メモリ256MB。Bearer認証、リポジトリ許可リスト、入力検証、タイムアウト/指数バックオフ再試行、JSONログ |
+| 読み取り専用GitHubワークフロー | ✅ | 公開リポジトリのメタデータ取得（未認証、書き込みなし）→要約。失敗時は Error summary 分岐 |
+| 否定テスト | ✅ | トークン無し401 / 形式不正400 / 許可リスト外403 / 不明ジョブ404 |
+| Kuma監視 | ✅ | `monitor-net`（172.31.0.0/24）経由で `http://n8n:5678/healthz` |
+| バックアップ | ✅ | n8nデータ・ジョブレポート・`.env` を暗号化バックアップに追加。リストア試験でn8nの起動とワークフロー読出しを確認 |
+| 外部AI API接続基盤 | ⬜ 未着手 | APIキー・予算上限の承認待ち |
+
+**発見した問題と対処**
+- 初回実行で python-jobs が500: レポート用ボリュームが root 所有で非rootが書けなかった → Dockerfileと導入スクリプトで所有者を修正。
+- **エラー出力にBearerトークンが含まれた**: HTTP Requestノードのエラーオブジェクトに送信ヘッダーが入り、n8n実行履歴に残った → `neverError` + `Job ok?` 分岐に変更し、エラー時は message のみ出力。該当実行を削除し、`ROTATE_JOBS_TOKEN=1 bash phase3-run.sh` でトークンをローテーション。**通信エラー（接続不可）時はエラーオブジェクトにヘッダーが残り得る**ため、実行履歴の保持期間短縮とトークン定期ローテーションで緩和する（残存リスク）。
+
+ロールバック: `cd ~/home-ai-lab/n8n && sudo docker compose down`（ボリューム保持）。Kumaは `monitor-net` から外れても動作する。ボリューム/`monitor-net`の削除は別途承認。
+
+## Phase 4 実施結果（2026-10-15）
+| 項目 | 結果 | 備考 |
+|---|---|---|
+| Open WebUI（`stacks/open-webui`） | ✅ | `ghcr.io/open-webui/open-webui:v0.12.0-slim`、`127.0.0.1:8300` のみ、healthy。cap_drop ALL、no-new-privileges、2GB上限 |
+| 鍵管理方式 | ✅（方式）/ ⬜（実鍵） | `owui-admin.sh`（非表示入力→`secrets/*.key`(600)→`.env`生成）。偽の鍵でスクリプトのロジックをローカル検証。実キーでの動作は**未検証** |
+| プロバイダー到達性 | ✅（鍵なし） | OpenAI/Anthropic 401、Gemini/RunPod 404（到達可） |
+| Kuma監視 | ✅ | `http://open-webui:8080/health` Up |
+| バックアップ | ✅（スクリプト更新）/ ⬜（実行） | Open WebUIデータ・`.env`・`secrets/` を対象に追加。NUC上でバックアップ+復元試験PASS（ただし取得時点では管理者未作成で `users: 0`。管理者作成後の復元は未確認） |
+| 管理者作成 | ✅ | `onboarding` 解消を確認、`lock-signup` 済み（サインアップ無効）。**初回は未作成のまま閉じてしまい再オープンが必要だった** |
+| 実接続 | ⬜ | APIキー待ち |
+
+**発見した問題と対処**: Phase 3でKumaを `monitor-net` に接続した際、ホストへの経路の送信元が `monitor-net`(172.31.0.0/24)になりUFW許可（172.30.0.0/24→22）に合わず、**「NUC SSH (host)」監視が Phase 3 完了時点からDownだった（当時の報告で見落とし）**。Kumaの `gw_priority`（既定経路を172.30.0.0/24側へ固定）で修正（UFWは緩めない）。`scripts/fix-kuma-gw.sh`。
+
+## Phase 5 実施結果（2026-10-15）
+詳細は [mcp-internal-api.md](mcp-internal-api.md)。
+| 項目 | 結果 | 備考 |
+|---|---|---|
+| MCPサーバー（`stacks/mcp`） | ✅ | 自前の最小実装（標準ライブラリのみ）。ツール4種はすべて読み取り専用 |
+| 認証・認可・タイムアウト・監査ログ | ✅ | クライアント別トークン＋ツール許可リスト、ツール5秒、レート制限、JSON監査ログ（トークン/引数値なし） |
+| 外部公開されないこと | ✅ | 公開ポートなし、`internal` ネットワーク、外向き通信ブロック、LANからの1051ポートスキャンで開放は22のみ、UFW変更なし |
+| n8nとの接続 | ✅ | ワークフロー「MCP read-only test」成功 |
+| Open WebUI / 外部AIとの接続 | ⬜ 未検証 | 到達性と401のみ確認。APIキー・UI登録待ち |
+| Kuma監視 | ✅ | `http://mcp-server:8080/healthz` Up |
+| バックアップ | ⬜ | スクリプトに追加済み、NUC上での実行は未実施 |
