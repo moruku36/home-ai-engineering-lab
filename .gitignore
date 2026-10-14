@@ -1,16 +1,27 @@
+# Secrets and credentials - never commit
 .env
 .env.*
 !.env.example
-*.key
-*.pem
-*.sqlite*
-secrets/
-backups/
-data/
-__pycache__/
-.DS_Store
-.env
 *.env
-!.env.example
+!*.env.example
 secrets/
 stacks/open-webui/config/
+*.key
+*.pem
+*.ppk
+*.p12
+*.pfx
+id_rsa*
+id_ed25519*
+*identity*.txt
+*.sqlite*
+*.db
+
+# Local data and backups
+backups/
+data/
+*.tar.age
+
+# Misc
+__pycache__/
+.DS_Store

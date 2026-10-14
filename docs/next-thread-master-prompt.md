@@ -1,3 +1,6 @@
+> ⚠️ **Historical / superseded (2026-10-15).** This was a hand-off prompt written *before* Docker, Kuma, n8n, Open WebUI, MCP and backups were deployed; it still says Docker is not installed. **Do not use it as current state.** See [README](../README.md) and [build-progress](build-progress.md).
+> ⚠️ **過去の資料（置き換え済み）。** Docker・Kuma・n8n・Open WebUI・MCP・バックアップの導入*前*の引き継ぎ用プロンプトで、「Dockerは未導入」などの古い内容を含みます。**現在の状態としては使わないでください。** 最新は [README](../README.md) と [build-progress](build-progress.md)。
+
 # Master prompt: Home AI Engineering Lab 継続作業
 
 以下を次のChatGPTスレッドにそのまま貼り付けて使う。
