@@ -48,3 +48,8 @@
 - 外部LLMのAPIキーは `secrets/<provider>.key`（600）→`.env`（600、生成物）。Git・チャット・ログに出さない。詳細・費用統制・失効手順は [ai-api-key-management.md](ai-api-key-management.md)。
 - 外部へ送信されるのは会話内容のみ。機密・個人情報を入力しない運用。プロバイダー側で月額ハードリミット・専用キーを設定してから登録する。
 - ネットワーク注意: コンテナに複数ネットワークを付けると既定経路・送信元IPが変わり、UFWの許可ルールに合わなくなる場合がある（Kumaで発生、`gw_priority`で解決）。
+
+### Phase 5（MCP）追加分
+- MCPサーバーは公開ポートなし・`internal` ネットワーク（外向き通信なし）。クライアントは n8n / Open WebUI / Kuma(`/healthz`のみ)。詳細・検証結果・未確認事項は [mcp-internal-api.md](mcp-internal-api.md)。
+- 認証はクライアント別Bearer、ツールは許可リスト制、全ツール読み取り専用。**書き込み系ツールは追加しない（追加時は別途承認）**。
+- 監査ログ: `mcp_mcp-audit` ボリューム（トークン・引数値は記録しない）。トークンは `~/home-ai-lab/mcp/.env`（600）で、バックアップ(暗号化)に含まれる。

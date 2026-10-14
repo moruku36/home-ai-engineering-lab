@@ -1,0 +1,79 @@
+{
+  "id": "McpReadOnly00001",
+  "name": "MCP read-only test",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "b2000000-0000-4000-8000-000000000001",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://mcp-server:8080/mcp",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'tools/list' }) }}",
+        "options": { "timeout": 15000, "response": { "response": { "neverError": true } } }
+      },
+      "id": "b2000000-0000-4000-8000-000000000002",
+      "name": "tools/list",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [220, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "credentials": { "httpHeaderAuth": { "id": "mcptoken0000001", "name": "mcp token (n8n)" } }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://mcp-server:8080/mcp",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'server_time', arguments: {} } }) }}",
+        "options": { "timeout": 15000, "response": { "response": { "neverError": true } } }
+      },
+      "id": "b2000000-0000-4000-8000-000000000003",
+      "name": "call server_time",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [440, 0],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 2000,
+      "credentials": { "httpHeaderAuth": { "id": "mcptoken0000001", "name": "mcp token (n8n)" } }
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "m1", "name": "tools", "value": "={{ $('tools/list').item.json.result ? $('tools/list').item.json.result.tools.map(t => t.name).join(', ') : 'ERROR: ' + JSON.stringify($('tools/list').item.json.error || $('tools/list').item.json) }}", "type": "string" },
+            { "id": "m2", "name": "server_time", "value": "={{ $json.result ? $json.result.content[0].text : 'ERROR: ' + JSON.stringify($json.error || $json) }}", "type": "string" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "b2000000-0000-4000-8000-000000000004",
+      "name": "Summary",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [660, 0]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": { "main": [[{ "node": "tools/list", "type": "main", "index": 0 }]] },
+    "tools/list": { "main": [[{ "node": "call server_time", "type": "main", "index": 0 }]] },
+    "call server_time": { "main": [[{ "node": "Summary", "type": "main", "index": 0 }]] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "active": false
+}

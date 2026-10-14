@@ -56,6 +56,7 @@ flowchart TB
 - [セキュリティ・運用](docs/security-operations.md)
 - [バックアップ・リストア手順](docs/backup-restore.md)
 - [外部AI APIの鍵管理と接続方式](docs/ai-api-key-management.md)
+- [MCP / 内部API](docs/mcp-internal-api.md)
 - Composeスタック: [`stacks/`](stacks/)、運用スクリプト: [`scripts/`](scripts/)
 - [利用シナリオと検証基準](docs/use-cases.md)
 
@@ -68,7 +69,7 @@ flowchart TB
 | 2 | Docker Compose、Uptime Kuma、バックアップ | 🟨 ほぼ完了（Docker・Kuma・再起動試験・ローカル暗号化バックアップ/リストア試験は合格。**NUC外バックアップ保存は保留**） |
 | 3 | n8n、読み取り専用自動化 | 🟨 ほぼ完了（n8n + Pythonジョブ導入・読み取り専用GitHubワークフロー成功・Kuma監視・バックアップ対象化。外部AI API接続基盤は未着手） |
 | 4 | Open WebUI、外部AI API | 🟨 構成導入済み（鍵なし起動・到達性確認・鍵管理方式確立。**APIキー未登録、実接続は未検証**） |
-| 5 | MCP/API、GitHub連携 | ⬜ 未着手 |
+| 5 | MCP/API、GitHub連携 | 🟨 読み取り専用MCPサーバー導入・n8n経由で検証・非公開確認済み（**Open WebUIからの利用、公式MCPクライアントでの互換性は未検証**。GitHub連携の書き込み系は未着手） |
 
 詳細なログ・次の手順は [構築進捗](docs/build-progress.md) を参照。以前の「USB作成待ち」「実機導入待ち」は完了済みです。
 

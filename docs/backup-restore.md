@@ -71,3 +71,6 @@ sudo systemctl daemon-reload
 - 対象に **Open WebUIデータ（`open-webui_open-webui-data`）** と、`~/home-ai-lab/open-webui/{.env,secrets/}`（APIキー。アーカイブごと暗号化）を追加（スクリプト更新済み、NUC上での実行は未実施）。
 - リストア試験は `webui.db` の整合性とユーザー数を確認。
 - 実復旧時は `owui-data.tar` を `open-webui_open-webui-data` に戻し、`.env` と `secrets/` を配置して `docker compose up -d`。
+
+## Phase 5 での拡張（2026-10-15）
+- 対象に **MCP監査ログ（`mcp_mcp-audit`）** と `~/home-ai-lab/mcp/.env`（MCPトークン。暗号化）を追加（スクリプト更新済み、NUC上での実行・復元試験は未実施）。

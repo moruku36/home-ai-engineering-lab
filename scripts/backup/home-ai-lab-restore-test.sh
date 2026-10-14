@@ -77,4 +77,11 @@ if [ -f "$work/owui-data.tar" ]; then
   echo "users: $(sqlite3 "$work/odb/webui.db" 'select count(*) from user;')"
   echo "RESTORE TEST (open-webui data): PASS"
 fi
+
+if [ -f "$work/mcp-audit.tar" ]; then
+  echo "=== MCP audit log ==="
+  mkdir "$work/madb"; tar -C "$work/madb" -xf "$work/mcp-audit.tar"
+  echo "audit lines: $(cat "$work"/madb/audit.jsonl 2>/dev/null | wc -l)  (valid JSON lines: $(python3 -c "import json,sys;print(sum(1 for l in open(sys.argv[1]) if json.loads(l)))" "$work/madb/audit.jsonl" 2>/dev/null || echo n/a))"
+  echo "RESTORE TEST (mcp audit): PASS"
+fi
 echo "RESTORE TEST: PASS"
