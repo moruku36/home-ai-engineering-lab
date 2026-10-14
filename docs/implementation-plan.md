@@ -69,3 +69,20 @@ df -h
 | Kuma通知 / 外部死活監視 | ⬜ 未実施 | |
 
 ロールバック: Kuma `docker compose down`（ボリューム保持）、UFWは `phase2b-ufw-docker-ssh.sh rollback`、Docker撤去はデータ確認後に別途承認。
+
+## Phase 3 実施結果（2026-10-15）
+| 項目 | 結果 | 備考 |
+|---|---|---|
+| n8n（`stacks/n8n`） | ✅ | n8n 2.43.5。`127.0.0.1:5678` のみ。SSHトンネル経由。`.env`（chmod 600）に暗号化キー/トークン。実行履歴は7日で自動削除。Execute Command等のノードを無効化、公開APIと環境変数アクセスを無効化 |
+| Pythonジョブ（`python-jobs`） | ✅ | 内部ネットワークのみ・公開ポートなし。read-only rootfs、cap_drop ALL、非root、メモリ256MB。Bearer認証、リポジトリ許可リスト、入力検証、タイムアウト/指数バックオフ再試行、JSONログ |
+| 読み取り専用GitHubワークフロー | ✅ | 公開リポジトリのメタデータ取得（未認証、書き込みなし）→要約。失敗時は Error summary 分岐 |
+| 否定テスト | ✅ | トークン無し401 / 形式不正400 / 許可リスト外403 / 不明ジョブ404 |
+| Kuma監視 | ✅ | `monitor-net`（172.31.0.0/24）経由で `http://n8n:5678/healthz` |
+| バックアップ | ✅ | n8nデータ・ジョブレポート・`.env` を暗号化バックアップに追加。リストア試験でn8nの起動とワークフロー読出しを確認 |
+| 外部AI API接続基盤 | ⬜ 未着手 | APIキー・予算上限の承認待ち |
+
+**発見した問題と対処**
+- 初回実行で python-jobs が500: レポート用ボリュームが root 所有で非rootが書けなかった → Dockerfileと導入スクリプトで所有者を修正。
+- **エラー出力にBearerトークンが含まれた**: HTTP Requestノードのエラーオブジェクトに送信ヘッダーが入り、n8n実行履歴に残った → `neverError` + `Job ok?` 分岐に変更し、エラー時は message のみ出力。該当実行を削除し、`ROTATE_JOBS_TOKEN=1 bash phase3-run.sh` でトークンをローテーション。**通信エラー（接続不可）時はエラーオブジェクトにヘッダーが残り得る**ため、実行履歴の保持期間短縮とトークン定期ローテーションで緩和する（残存リスク）。
+
+ロールバック: `cd ~/home-ai-lab/n8n && sudo docker compose down`（ボリューム保持）。Kumaは `monitor-net` から外れても動作する。ボリューム/`monitor-net`の削除は別途承認。

@@ -65,7 +65,7 @@ flowchart TB
 | 0 | ハードウェア確認、ESXiからの移行 | ✅ 完了 |
 | 1 | Ubuntu Server、WindowsからSSH、UFW、SSH認証強化 | ✅ ほぼ完了（鍵限定の再接続テスト未確認） |
 | 2 | Docker Compose、Uptime Kuma、バックアップ | 🟨 ほぼ完了（Docker・Kuma・再起動試験・ローカル暗号化バックアップ/リストア試験は合格。**NUC外バックアップ保存は保留**） |
-| 3 | n8n、読み取り専用自動化 | ⬜ 未着手 |
+| 3 | n8n、読み取り専用自動化 | 🟨 ほぼ完了（n8n + Pythonジョブ導入・読み取り専用GitHubワークフロー成功・Kuma監視・バックアップ対象化。外部AI API接続基盤は未着手） |
 | 4 | Open WebUI、外部AI API | ⬜ 未着手 |
 | 5 | MCP/API、GitHub連携 | ⬜ 未着手 |
 
