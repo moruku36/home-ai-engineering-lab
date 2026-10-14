@@ -27,34 +27,39 @@ flowchart LR
     subgraph UI["Loopback-only UIs (127.0.0.1)"]
       KUMA["Uptime Kuma :3001"]
       N8N["n8n :5678"]
-      OWUI["Open WebUI :8300"]
     end
     subgraph INT["Internal only (no published ports)"]
-      PJ["python-jobs"]
+      PJ["python-jobs<br/>GitHub collector"]
       MCP["MCP server"]
     end
+    RPT[("Reports + snapshots")]
     BK[("/var/backups/home-ai-lab<br/>age-encrypted")]
+    OWUI["Open WebUI<br/>stopped, data kept"]
   end
 
-  EXT1["GitHub (public API)"]
-  EXT2["OpenAI · Anthropic · Gemini · RunPod"]
+  GH["GitHub REST API (read-only GET)"]
+  HC["Free external heartbeat check (optional)"]
+  YOU["You (e-mail etc.)"]
 
   BR -.-> SSH
   SSH ==> UFW
   UFW ==> UI
-  N8N --> PJ
+  N8N -->|"07:00 JST"| PJ
+  PJ -->|"HTTPS GET"| GH
+  PJ --> RPT
+  RPT -->|"read-only"| MCP
   N8N --> MCP
-  PJ -->|"HTTPS, read-only"| EXT1
-  OWUI -->|"HTTPS + API key (not registered yet)"| EXT2
-  OWUI -.->|"planned"| MCP
+  PJ -->|"push up / down"| KUMA
   KUMA -.->|"health checks"| N8N
-  KUMA -.->|"health checks"| OWUI
   KUMA -.->|"health checks"| MCP
+  KUMA -.->|"channel you configure"| YOU
+  NUC -.->|"outbound ping every 5 min"| HC
+  HC -.->|"alert if pings stop"| YOU
   NUC -.-> BK
 ```
 
-**EN:** You reach the UIs only through an SSH tunnel. The services that nobody needs to open in a browser (python-jobs, MCP) publish no port at all.
-**JA:** 画面付きサービスにはSSHトンネル経由でのみ入ります。ブラウザで開く必要のないもの（python-jobs、MCP）は、ポート自体を公開しません。
+**EN:** You reach the UIs only through an SSH tunnel. Services nobody opens in a browser (python-jobs, MCP) publish no port at all. The only outbound traffic is the GitHub API, the optional heartbeat, and image pulls.
+**JA:** 画面付きサービスには SSH トンネル経由でのみ入ります。ブラウザで開かないもの（python-jobs、MCP）はポート自体を公開しません。外向き通信は GitHub API、任意の heartbeat、イメージ取得のみです。
 
 ## 3. Networks and exposure / ネットワークと公開範囲
 
@@ -67,7 +72,8 @@ flowchart LR
   MCP["MCP server"]
 
   KUMA ---|"monitor-net 172.31.0.0/24"| N8N
-  KUMA ---|"monitor-net"| OWUI
+  KUMA ---|"monitor-net"| PJ
+  KUMA ---|"monitor-net (stopped)"| OWUI
   KUMA ---|"mcp-net 172.32.0.0/24 (internal)"| MCP
   N8N ---|"mcp-net"| MCP
   OWUI ---|"mcp-net"| MCP
@@ -77,7 +83,7 @@ flowchart LR
 | Network | Members | Purpose / 目的 |
 |---|---|---|
 | Kuma default `172.30.0.0/24` | Uptime Kuma | Kuma's route to the host SSH check (the only UFW exception: this subnet → TCP 22) / Kumaがホストのssh死活を見る経路（UFWの唯一の例外） |
-| `monitor-net` `172.31.0.0/24` | Kuma, n8n, Open WebUI | Health checks by container name / コンテナ名での死活監視 |
+| `monitor-net` `172.31.0.0/24` | Kuma, n8n, python-jobs, Open WebUI (stopped) | Health checks by container name; python-jobs reaches Kuma's push endpoint here (every call to python-jobs still needs its bearer token) / コンテナ名での死活監視。python-jobs は Kuma の push 先に到達（呼び出しには引き続きトークンが必要） |
 | `mcp-net` `172.32.0.0/24` **internal** | MCP server, n8n, Open WebUI, Kuma | MCP only. **No gateway: no Internet, no host.** Kuma may only call `/healthz` / MCP専用。出口なし。Kumaは`/healthz`のみ |
 | `n8n_internal` | n8n, python-jobs | Job calls; MCP and others cannot see python-jobs / ジョブ呼び出し専用 |
 
@@ -90,22 +96,25 @@ Checked on the live NUC / 実機で確認済み:
 
 ## 4. Data flows / データの流れ
 
-### 4.1 Read-only GitHub job (works today) / 読み取り専用GitHubジョブ（動作済み）
+### 4.1 Daily GitHub report / GitHub日次レポート
 
 ```mermaid
 sequenceDiagram
-  actor You
-  participant N as n8n
+  participant S as n8n schedule 07:00 JST
   participant P as python-jobs
   participant G as GitHub API
-  You->>N: Run workflow (SSH tunnel)
-  N->>P: POST /jobs/github-repo-metadata (bearer token)
-  P->>P: check allowlist and input format
-  P->>G: GET repo metadata (public, no credentials)
-  G-->>P: JSON
-  P-->>N: summary + Markdown report saved
-  N-->>You: "repo | stars | open issues | pushed"
+  participant R as Reports + snapshots
+  participant K as Uptime Kuma
+  S->>P: POST /jobs/github-dev-snapshot (bearer token)
+  P->>G: list repos (2 calls) + search open issues and PRs (2 calls)
+  P->>G: per active repo: Actions runs, last commit (budget-limited)
+  G-->>P: JSON (read-only GET only)
+  P->>P: diff vs previous snapshot, derive alerts, keep fuller report of the day
+  P->>R: github-daily-DATE.md, github-daily-latest.md, snapshot JSON
+  P->>K: push up (OK) or down (critical alert / collector error)
+  P-->>S: summary counts
 ```
+If nothing is pushed for 26 h, Kuma marks the push monitor `down` itself. / 26時間 heartbeat がなければ Kuma が自分で `down` にします。
 
 ### 4.2 MCP tool call (works from n8n) / MCPツール呼び出し（n8nから動作）
 
@@ -122,28 +131,18 @@ sequenceDiagram
   M->>A: one JSON line (client, tool, status, args hash - no secrets)
   M-->>C: result
 ```
-Open WebUI → MCP is **planned, not verified**. / Open WebUI→MCPは**計画のみ・未検証**。
+The n8n workflow *MCP read-only test* lists the reports and reads the latest one (verified). Open WebUI → MCP is **parked**. / n8n の「MCP read-only test」で一覧取得と最新レポートの読み取りを確認済み。Open WebUI→MCP は**保留**。
 
-### 4.3 Chat with a cloud LLM (needs your API key) / クラウドLLMとのチャット（APIキーが必要）
+### 4.3 Chat with a cloud LLM — parked / クラウドLLMとのチャット（保留中）
 
-```mermaid
-sequenceDiagram
-  actor You
-  participant W as Open WebUI
-  participant L as LLM provider
-  You->>W: message (SSH tunnel)
-  W->>L: HTTPS + API key from a chmod 600 file
-  L-->>W: answer
-  W-->>You: answer
-```
-**EN:** Not exercised yet — no key is registered. Your messages go to the provider, so do not type confidential data.
-**JA:** まだ動作させていません（キー未登録）。入力内容はプロバイダーに送られるので、機密情報は入れないでください。
+**EN:** Open WebUI is stopped on purpose (no paid LLM API is used). When started again it would send chat content to a provider using an API key kept in a `chmod 600` file — see [ai-api-key-management.md](ai-api-key-management.md). **Never exercised; no key is registered.**
+**JA:** Open WebUI は意図的に停止中です（有料 LLM API は使いません）。再開した場合は、`chmod 600` ファイルの API キーでチャット内容をプロバイダーに送ります（[ai-api-key-management.md](ai-api-key-management.md)）。**一度も実行しておらず、キーも未登録です。**
 
 ## 5. Backup and recovery / バックアップと復旧
 
 ```mermaid
 flowchart LR
-  T["systemd timer<br/>daily 03:30"] --> S["Stop services briefly"]
+  T["systemd timer<br/>daily 03:30 UTC (12:30 JST)"] --> S["Stop services briefly"]
   S --> A["Archive volumes + compose + .env"]
   A --> E["age encryption<br/>(public key only)"]
   E --> L[("/var/backups/home-ai-lab<br/>7 generations + sha256")]
@@ -178,3 +177,6 @@ flowchart LR
 | 005 | No GitHub self-hosted runner (untrusted-PR risk). | GitHub self-hosted Runnerは対象外（未信頼PRのリスク）。 |
 | 006 | MCP server is a **minimal self-made** one: small enough to audit, read-only. Interoperability with official clients is unverified. | MCPは**自作の最小実装**（監査しやすさ重視・読み取り専用）。公式クライアントとの互換性は未検証。 |
 | 007 | Loopback bind + SSH tunnel instead of LAN-exposed UIs, because Docker's published ports can bypass UFW. | DockerのポートはUFWを迂回し得るため、LAN公開せずループバック＋SSHトンネルにする。 |
+| 008 | Zero extra cost: no paid LLM API; work that needs no AI is done with n8n + Python + GitHub API. Open WebUI is parked (stopped, data kept). | 追加費用ゼロ：有料LLM APIは使わず、AI不要の処理は n8n＋Python＋GitHub API で行う。Open WebUI は保留（停止・データ保持）。 |
+| 009 | The collector only issues `GET`, uses the Search API instead of per-repo calls, and degrades to a *partial* report instead of failing when the unauthenticated limit (60/h) is hit. | 収集は `GET` のみ。リポジトリ毎の呼び出しではなく Search API を使い、無認証の上限(60回/時)に達しても失敗せず*部分的*レポートに縮退する。 |
+| 010 | Alerts are delivered through Uptime Kuma (push monitor) so there is one notification channel to configure and one place that de-duplicates. | 通知は Uptime Kuma（Push監視）に集約。設定する通知チャネルは1つで、重複抑制も1か所。 |

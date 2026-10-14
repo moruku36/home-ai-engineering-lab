@@ -44,13 +44,19 @@ services:
     image: home-ai-lab/python-jobs:1
     container_name: python-jobs
     restart: unless-stopped
-    # No published ports: reachable only from n8n over the internal network.
+    # No published ports. Reachable by name from n8n (internal) and from monitor-net (Kuma etc.); every call needs JOBS_TOKEN.
     environment:
       JOBS_TOKEN: ${JOBS_TOKEN:?set in .env}
       ALLOWED_REPOS: ${ALLOWED_REPOS:-}
+      GITHUB_OWNERS: ${GITHUB_OWNERS:-moruku36}      # owners the snapshot job may read (allowlist)
+      GITHUB_TOKEN: ${GITHUB_TOKEN:-}                # OPTIONAL read-only fine-grained PAT; set via scripts/jobs-admin.sh
+      KUMA_PUSH_TOKEN: ${KUMA_PUSH_TOKEN:-}          # OPTIONAL Uptime Kuma push-monitor token; set via scripts/jobs-admin.sh
+      KUMA_BASE: http://uptime-kuma:3001
+      TZ: Asia/Tokyo
     volumes:
-      - jobs-reports:/data/reports
-    networks: [internal]
+      - jobs-reports:/data/reports                   # Markdown reports (also readable by the MCP server, read-only)
+      - jobs-state:/data/state                       # JSON snapshots + alert state (not exposed to MCP)
+    networks: [internal, monitor]                    # monitor: only to reach Uptime Kuma's push endpoint
     read_only: true
     tmpfs: ["/tmp:size=16m"]
     security_opt: ["no-new-privileges:true"]
@@ -73,3 +79,4 @@ networks:
 volumes:
   n8n-data:
   jobs-reports:
+  jobs-state:

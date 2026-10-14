@@ -9,6 +9,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -79,7 +80,28 @@ def github_repo_metadata(params):
     return {"data": data, "report": path}
 
 
-JOBS = {"github-repo-metadata": github_repo_metadata}
+_SNAPSHOT_LOCK = threading.Lock()
+
+
+def github_dev_snapshot(params):
+    """Read-only multi-repository GitHub snapshot + daily Markdown report (see github_snapshot.py)."""
+    import github_snapshot as gs
+    cfg = gs.Config()
+    owner = params.get("owner") or (sorted(cfg.owners)[0] if cfg.owners else "")
+    if not isinstance(owner, str) or not owner or owner not in cfg.owners:
+        raise JobError(403, "owner not in GITHUB_OWNERS")
+    if not _SNAPSHOT_LOCK.acquire(blocking=False):
+        raise JobError(409, "a snapshot is already running")
+    try:
+        return gs.run(owner, cfg)
+    except gs.ApiError as e:
+        log("error", "snapshot failed", error=str(e)[:200])
+        raise JobError(502, f"snapshot failed: {str(e)[:150]}")
+    finally:
+        _SNAPSHOT_LOCK.release()
+
+
+JOBS = {"github-repo-metadata": github_repo_metadata, "github-dev-snapshot": github_dev_snapshot}
 
 
 class Handler(BaseHTTPRequestHandler):

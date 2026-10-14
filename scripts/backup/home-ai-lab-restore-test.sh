@@ -84,4 +84,10 @@ if [ -f "$work/mcp-audit.tar" ]; then
   echo "audit lines: $(cat "$work"/madb/audit.jsonl 2>/dev/null | wc -l)  (valid JSON lines: $(python3 -c "import json,sys;print(sum(1 for l in open(sys.argv[1]) if json.loads(l)))" "$work/madb/audit.jsonl" 2>/dev/null || echo n/a))"
   echo "RESTORE TEST (mcp audit): PASS"
 fi
+if [ -f "$work/jobs-state.tar" ]; then
+  echo "=== GitHub monitor state ==="
+  mkdir "$work/jst"; tar -C "$work/jst" -xf "$work/jobs-state.tar"
+  echo "snapshots: $(ls "$work/jst/snapshots" 2>/dev/null | wc -l)  (latest.json present: $([ -f "$work/jst/snapshots/latest.json" ] && echo yes || echo no))"
+  echo "RESTORE TEST (github state): PASS"
+fi
 echo "RESTORE TEST: PASS"

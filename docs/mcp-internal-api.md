@@ -27,7 +27,7 @@ Uptime Kuma ┘ (/healthz のみ)         └─ /data/reports（n8n_jobs-report
 | 監査ログ | 1リクエスト1行のJSON（ts, ip, client, method, tool, status, http, ms, `args_sha256`, `args_bytes`）。**トークンも引数の値も記録しない**。`/var/log/mcp/audit.jsonl`（5MB×5世代ローテーション）＋stdout。バックアップ対象 |
 
 ## 検証結果
-**ローカル自己テスト（`python tests/mcp_selftest.py`、36項目、全PASS）**: 認証(401)、Origin(403)、バージョン交渉、ツール一覧のクライアント別フィルタ、権限外ツール拒否、パストラバーサル各種（`../`、`%2f`、`/`、先頭ドット、NUL、拡張子）、不正JSON(-32700)、バッチ拒否、413、**ツールタイムアウト(-32002)**、**レート制限(429)**、監査ログにトークン/引数値が含まれないこと。
+**ローカル自己テスト（`python tests/mcp_selftest.py`、34項目、全PASS）**: 認証(401)、Origin(403)、バージョン交渉、ツール一覧のクライアント別フィルタ、権限外ツール拒否、パストラバーサル各種（`../`、`%2f`、`/`、先頭ドット、NUL、拡張子）、不正JSON(-32700)、バッチ拒否、413、**ツールタイムアウト(-32002)**、**レート制限(429)**、監査ログにトークン/引数値が含まれないこと。
 
 **実機（`scripts/phase5-run.sh` の出力、2026-10-15）**
 - 公開ポート: `docker port` 空。ホストの docker-proxy 待ち受けは 127.0.0.1:3001/5678/8300 のみ（MCPなし）
@@ -53,3 +53,8 @@ Uptime Kuma ┘ (/healthz のみ)         └─ /data/reports（n8n_jobs-report
 - トークンローテーション: `ROTATE_MCP_TOKENS=1 bash ~/phase5-run.sh`（n8n資格情報は自動で再取込み。Open WebUI側は管理画面で再入力が必要）。
 - 監査ログ確認: `sudo docker exec mcp-server tail -n 50 /var/log/mcp/audit.jsonl`
 - ロールバック: `cd ~/home-ai-lab/mcp && sudo docker compose down`（ボリューム保持）。n8n/Open WebUI/Kumaの `compose.yaml` から `mcp` ネットワークを外して `up -d`。`docker network rm mcp-net` は別途承認。
+
+## 追記（2026-10-15）：GitHub 日次レポートの読み取り
+- MCP が読み取り専用でマウントしているレポート用ボリューム（`n8n_jobs-reports`）に、GitHub 収集ジョブが `github-daily-YYYY-MM-DD.md` と `github-daily-latest.md` を書き込む（詳細：[github-monitoring.md](github-monitoring.md)）。
+- **実機で確認済み：** n8n「MCP read-only test」が `list_reports`（3ファイルを列挙）と `read_report`（`github-daily-latest.md` の本文）に成功。MCP 側のコード変更はなし（既存の名前検証・64KiB 上限・読み取り専用マウントのまま）。
+- 状態の JSON スナップショット（`jobs-state`）は MCP に**マウントしていない**（読めない）。Open WebUI は停止中のため、AI チャットクライアントからの読み取りは未検証。
