@@ -34,3 +34,11 @@
 - **dockerグループ**: 未使用。`sudo docker` 運用。sudoersの恒久拡大なし（パスワード必須のまま）。
 - **バックアップ**: age公開鍵暗号。NUC上の暗号化はrecipient（公開鍵）のみで行い、秘密鍵（`/etc/home-ai-lab/backup-identity.key`）はroot 600＋NUC外にも保管。詳細は [backup-restore.md](backup-restore.md)。
 - **未対応**: NUC外保存、通知設定、`cap_drop`/read-only rootfs、Kuma自身停止時の外部検知。
+
+### Phase 3（n8n / Pythonジョブ）追加分
+- n8n管理画面は `127.0.0.1:5678` のみ（SSHトンネル）。オーナー認証有効。公開API・環境変数参照・コマンド実行/ファイル読み書きノードは無効。
+- python-jobs は公開ポートなし、read-only rootfs、`cap_drop: ALL`、非root。Bearer認証（`hmac.compare_digest`）、`ALLOWED_REPOS` 許可リスト、入力検証、ボディ上限、タイムアウト。GitHubは未認証の公開データ読み取りのみ。
+- 秘密情報: `~/home-ai-lab/n8n/.env`（chmod 600、Git管理外）の `N8N_ENCRYPTION_KEY` / `JOBS_TOKEN`。`.env` は暗号化バックアップに含まれる（`N8N_ENCRYPTION_KEY` を失うとn8n資格情報は復号不能）。
+- **トークンローテーション**: `ROTATE_JOBS_TOKEN=1 bash ~/phase3-run.sh`。n8nの実行履歴には、通信エラー時にAuthorizationヘッダーが残り得る点に注意（7日で自動削除）。
+- ネットワーク: `monitor-net`（172.31.0.0/24）はKumaとn8nのみ。python-jobsは `n8n_internal` のみで、Kumaからは到達不可。UFW追加なし。
+- 未対応: n8nのread-only rootfs、`cap_drop` 後の長期動作確認、外部AI APIキーの保管方式（n8n資格情報＋予算上限を承認後に設計）。

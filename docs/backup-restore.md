@@ -60,3 +60,9 @@ sudo systemctl daemon-reload
 - timerの**自動実行**は未確認（手動実行で動作確認済み）。
 - リストア試験は「DB内容と起動可否」まで。履歴データの完全性は未検証。
 - バックアップ中はKumaが数秒停止し、その間の監視は欠測する。
+
+## Phase 3 での拡張（2026-10-15）
+- 対象に **n8nデータ（`n8n_n8n-data`）**、**ジョブレポート（`n8n_jobs-reports`）**、**`~/home-ai-lab/n8n/.env`**（秘密情報。アーカイブごと暗号化）を追加。バックアップ中はn8n/python-jobs/Kumaを数秒停止。
+- リストア試験は、n8nのDB整合性（`integrity_check`）、ワークフロー/資格情報件数、復元データでの使い捨てn8n起動（ネットワークなし）とCLIでのワークフロー読出しまで確認。
+- 実復旧時は、`n8n-data.tar` を `n8n_n8n-data` に戻し、`.env`（同じ `N8N_ENCRYPTION_KEY`）を `~/home-ai-lab/n8n/` に配置してから `docker compose up -d`。ボリューム内の所有者は uid 1000（node）。
+- 適用: `scripts/phase3-backup-update.sh`（スクリプト更新、バックアップ1回、リストア試験）。
