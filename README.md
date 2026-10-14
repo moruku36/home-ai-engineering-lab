@@ -49,6 +49,7 @@ flowchart TB
 ## 設計資料
 - [アーキテクチャ詳細](docs/architecture.md)
 - [導入・移行ランブック](docs/implementation-plan.md)
+- [物理セットアップ＆Ubuntu Server導入ランブック](docs/physical-setup-guide.md)
 - [セキュリティ・運用](docs/security-operations.md)
 - [利用シナリオと検証基準](docs/use-cases.md)
 

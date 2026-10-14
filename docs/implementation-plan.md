@@ -10,7 +10,9 @@
 5. BIOS更新は必要性と公式手順を確認して別途実施。
 
 ## Phase 1: Ubuntu Server
-1. Ubuntu公式のサポート中LTS ISOを取得、ハッシュ確認。
+> 詳細な配線・ブート・対話インストール手順は [物理セットアップ＆Ubuntu Server導入ランブック](physical-setup-guide.md) を参照。
+
+1. Ubuntu公式のサポート中LTS ISOを取得、ハッシュ確認（Ubuntu 24.04.5 LTS 取得済）。
 2. Rufus等でUSBインストーラーを作成（USB内容は消える）。
 3. **既存ESXiのデータ消去を明示的に判断後**、対象SSDを選んでインストール。
 4. OpenSSH Serverを有効化し、管理者ユーザー・SSH鍵認証を設定。
