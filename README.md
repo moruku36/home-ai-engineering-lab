@@ -1,6 +1,6 @@
 # Home AI Engineering Lab / 自宅AIエンジニアリングラボ
 
-> Status: **Design only / 未構築** — 2026-10-14
+> Status: **Ubuntu / SSH / UFW deployed; Docker unverified** — 2026-10-15 JST
 
 Intel NUC 11 Performance を、クラウドAI・GPU・GitHubと連携する常設AI開発・運用基盤として再利用するプロジェクト。**GPU搭載のLLM計算機ではなく、AIワークフローを実行・連携・観測するコントロールプレーン**とする。
 
@@ -16,11 +16,12 @@ Intel NUC 11 Performance を、クラウドAI・GPU・GitHubと連携する常�
 
 **非目標:** 大型LLMのローカル学習・GPU推論、無認証のインターネット公開、既存ESXiの強制初期化、Dots本体の直接インストール。
 
-## 想定ハードウェア（要実機確認）
+## 確認済みハードウェア・OS
 - Intel NUC 11 Performance / NUC11PAH (Core i5)、第11世代 4C8Tクラス、2.5GbE
-- RAM **32 GBと推定・未検証**。SSD容量・BIOS状態も未確認
-- 現状ESXi管理UIにアクセス可能、パスワード不明
-- 予定OS: Ubuntu Server LTS（導入時点でサポート状況を確認）
+- RAM **32 GB（16GB × 2）確認済み**、Crucial P5 NVMe SSD 1TB
+- ESXi 7.0.2から **Ubuntu Server 24.04 LTSに移行済み**
+- Windows→UbuntuのSSH接続成功、UFW稼働、OpenSSHの鍵認証有効・パスワード認証無効（実効値確認）
+- Dockerは導入手順案内済みだが **インストール未確認**
 
 ## 全体構成
 
@@ -47,45 +48,29 @@ flowchart TB
 ※論理設計。Open WebUI等のAPI接続は導入時に互換性・到達性を検証。
 
 ## 設計資料
+- **[最新の実装進捗・チェックリスト](docs/build-progress.md)**
+- **[次スレッド用マスタープロンプト](docs/next-thread-master-prompt.md)**
 - [アーキテクチャ詳細](docs/architecture.md)
 - [導入・移行ランブック](docs/implementation-plan.md)
 - [物理セットアップ＆Ubuntu Server導入ランブック](docs/physical-setup-guide.md)
 - [セキュリティ・運用](docs/security-operations.md)
 - [利用シナリオと検証基準](docs/use-cases.md)
 
-## フェーズ・進捗
+## フェーズ・進捗（2026-10-15）
 
 | Phase | 内容 | 状態 |
 |---|---|---|
-| 0 | ESXi消去判断（確定済）、RAM/SSD実機確認 | 進行中 (USB作成完了) |
-| 1 | Ubuntu Server導入、SSH疎通、ヘッドレス化 | 進行中 (実機作業待ち) |
-| 2 | Docker Compose、Uptime Kuma、バックアップ | 未着手 |
-| 3 | n8n、読み取り専用の自動化、監査ログ | 未着手 |
-| 4 | Open WebUI、外部推論APIへの疎通 | 未着手 |
-| 5 | MCP/API隔離実験、GitHub連携、必要ならGrafana | 未着手 |
+| 0 | ハードウェア確認、ESXiからの移行 | ✅ 完了 |
+| 1 | Ubuntu Server、WindowsからSSH、UFW、SSH認証強化 | ✅ ほぼ完了（鍵限定の再接続テスト未確認） |
+| 2 | Docker Compose、Uptime Kuma、バックアップ | ⬜ 未完了（Docker導入状況未確認） |
+| 3 | n8n、読み取り専用自動化 | ⬜ 未着手 |
+| 4 | Open WebUI、外部AI API | ⬜ 未着手 |
+| 5 | MCP/API、GitHub連携 | ⬜ 未着手 |
 
-### ▶ 次の物理アクション（Phase 0 & 1 実機導入）
-> 詳細手順は [物理セットアップ＆Ubuntu Server導入ランブック](docs/physical-setup-guide.md) を参照。
-
-- [ ] **1. USBメモリの安全な取り外し（Windows PC）**
-  - Rufus書き込み完了（`READY`）後、Windowsタスクトレイから安全に取り外して抜去。
-- [ ] **2. NUCの物理配線**
-  - 有線LAN、HDMI（モニター）、USBキーボード、作成したUSBメモリを接続し、最後に電源を接続。
-- [ ] **3. 起動とUSBブート**
-  - 電源ON直後に **`F10` キーを連打**し、Boot MenuからUEFI USBを選択してEnter。
-- [ ] **4. 対話インストールの進行（重要ポイント）**
-  - **ストレージ設定**: `Use an entire disk` を選択（既存ESXiの完全消去・上書き）。
-  - **ネットワーク**: 画面に表示される割り当てIPv4アドレス（例: `192.168.x.x`）をメモ。
-  - **SSH設定**: `[X] Install OpenSSH server` に必ずチェックを入れる（スペースキー）。
-- [ ] **5. インストール完了・USB抜去・再起動**
-  - 画面の `Please remove the installation medium...` 指示でUSBを抜いてEnter。
-- [ ] **6. 自宅Windows PCからのSSH接続確認**
-  - PowerShellから `ssh <ユーザー名>@<メモしたNUCのIP>` でログイン確認。
-- [ ] **7. ヘッドレス常設化**
-  - 接続確認後、モニターとキーボードを取り外し、電源＋有線LANの2本で常設稼働へ。
+詳細なログ・次の手順は [構築進捗](docs/build-progress.md) を参照。以前の「USB作成待ち」「実機導入待ち」は完了済みです。
 
 ## 原則
-1. 既存ESXiのデータ確認前に破壊的操作をしない。
+1. 既存ESXiの消去を伴うUbuntu移行は実施済み。今後の破壊的操作では対象とバックアップを必ず確認する。
 2. LAN限定から開始しルーターのポート開放はしない。
 3. 公開GitHubに秘密情報・ローカルIP・MAC・シリアルを掲載しない。
 4. API費用の上限・レート制限・人間の承認を設ける。
