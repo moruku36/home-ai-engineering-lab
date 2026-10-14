@@ -27,7 +27,9 @@
 - [x] n8n + Pythonジョブ（n8n 2.43.5、`127.0.0.1:5678` のみ公開、オーナー認証有効、python-jobs は内部ネットワークのみ・read-only rootfs・cap_drop ALL・Bearer認証。GitHub公開リポジトリのメタデータ取得ワークフロー成功、認証/入力検証の否定テスト 401/400/403/404 合格、Kuma監視 n8n Up、バックアップ/リストア試験にn8n含め合格）
 - [ ] 外部AI API接続の基本構成（未着手。APIキー未提供のため、承認後に実施）
 - [ ] n8nのエラー通知先（Kuma通知と併せて設定）
-- [ ] Open WebUIと外部AI API
+- [x] Open WebUI導入（v0.12.0-slim、`127.0.0.1:8300` のみ、API鍵なしで起動、テレメトリ無効、サインアップは管理者作成後に閉じる運用、Kuma監視 Up）
+- [x] Open WebUI管理者アカウント作成と `lock-signup`（2026-10-15 完了。初回は管理者未作成のままサインアップを閉じてしまい、`/api/config` の `onboarding` で未作成と判明 → 一時 `unlock-signup` → 作成 → 再度 `lock-signup`。管理者作成後のバックアップは翌03:30のtimer/次回手動実行で取得）
+- [ ] 外部LLM APIキー登録と実接続検証（OpenAI / Anthropic / Gemini / RunPod。キー未提供のため未検証。方式は docs/ai-api-key-management.md）
 - [ ] MCP/APIとGitHub連携
 
 ## 現在判明している構成
@@ -42,7 +44,7 @@
 1. バックアップ保存先（NUC外）を決定し、暗号化バックアップを転送・復元試験（認証情報は推測しない）。
 2. バックアップtimerの初回自動実行（翌03:30頃）を確認。
 3. Kumaの通知先設定、NUC外からの死活監視の検討。
-4. Phase 3 残り: 外部AI API接続の基本構成（APIキー・予算上限の承認後）、n8nエラー通知。次は Phase 4（Open WebUI）。
+4. Open WebUI管理者作成→`lock-signup`。APIキーは用途専用・月額上限設定後に `owui-admin.sh set-key` で登録し、実接続を検証。Phase 5（MCP）へ。
 
 ## 保安事項
 - ローカルIPはこの公開リポジトリに書かない。SSHログインコマンドでは現在のIPを本人が確認して使用。
