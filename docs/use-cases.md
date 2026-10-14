@@ -11,7 +11,7 @@ English first, Japanese below. "Status" is what was actually verified on 2026-10
 
 | Use case | EN: how it helps | JA: どう役立つか | Status / 状態 |
 |---|---|---|---|
-| **Morning GitHub overview** | One Markdown report: what changed, open PRs/issues, stale items, failed Actions, Dependabot (with a token), diff vs. yesterday. | 1枚のレポートで、更新・未対応PR/Issue・停滞・失敗Actions・Dependabot（トークン時）・前日差分を把握。 | ✅ live run OK (108 repos) · ⬜ first 07:00 JST run not yet observed |
+| **Morning GitHub overview** | One Markdown report: what changed, open PRs/issues, stale items, failed Actions, Dependabot (with a token), diff vs. yesterday. | 1枚のレポートで、更新・未対応PR/Issue・停滞・失敗Actions・Dependabot（トークン時）・前日差分を把握。 | ✅ run from n8n OK (109 repos) · ⬜ first 07:00 JST run not yet observed |
 | **Spot a broken CI quickly** | A failing default-branch Actions run turns the Kuma push monitor red. | デフォルトブランチのActions失敗でKumaのPush監視が赤になる。 | ✅ logic (fake-API tests) · ⬜ real failure not yet seen · ⬜ delivery needs a channel |
 | **Let an AI tool read the report safely** | Reports are served read-only through MCP (`list_reports`, `read_report`) with a token and audit log. | レポートをMCP経由で読み取り専用に提供（トークン＋監査ログ）。 | ✅ from n8n |
 | **Know when something breaks** | Kuma watches SSH, n8n, MCP and the collector; an external heartbeat can watch the whole NUC. | KumaがSSH・n8n・MCP・収集ジョブを監視。外部heartbeatでNUC全体も監視可能。 | ✅ detection · ⬜ notifications · ⬜ heartbeat not enabled |

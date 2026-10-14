@@ -18,7 +18,7 @@ It does **not** run AI models and **no paid LLM API is used**. Work that needs n
 
 | # | You get… | Powered by | Status |
 |---|---|---|---|
-| 1 | **A daily GitHub report** every morning (07:00 JST): recently updated repos, new/stale issues and PRs, failed Actions, Dependabot alerts (with a token), changes since yesterday — saved on the NUC | n8n + Python (`github-dev-snapshot`) | ✅ Live run OK (108 repos) · ⬜ first scheduled run not yet observed |
+| 1 | **A daily GitHub report** every morning (07:00 JST): recently updated repos, new/stale issues and PRs, failed Actions, Dependabot alerts (with a token), changes since yesterday — saved on the NUC | n8n + Python (`github-dev-snapshot`) | ✅ Run from n8n OK (109 repos) · ⬜ first scheduled run not yet observed |
 | 2 | **Read-only access to those reports for AI tools** through one authenticated, audited door | self-made MCP server | ✅ Read from n8n |
 | 3 | **Down / failure alerts** for the NUC, n8n, MCP, the collector and critical GitHub problems | Uptime Kuma (+ push monitor) | ✅ Detection · ⬜ **delivery needs a channel you set up** |
 | 4 | **"The whole NUC is dead" alert** from outside (free dead-man's switch) | heartbeat script + free external check | 🟡 Script ready, **not enabled** (needs your ping URL) |
@@ -119,7 +119,7 @@ ssh -N -L 3001:127.0.0.1:3001 -L 5678:127.0.0.1:5678 <user>@<nuc-address>
 
 Nothing below is counted as "passed".
 
-- ❌ **First scheduled 07:00 JST run** of the daily workflow (active, but not yet observed). The n8n *screen* run of this workflow has not been done either.
+- ❌ **First scheduled 07:00 JST run** of the daily workflow (it shows *Published*, and a run from the n8n screen succeeded, but a scheduled firing has not been observed yet).
 - ❌ **Notification delivery** (no Kuma channel), the **Kuma push** path (needs the push token), and the **external heartbeat** (not enabled).
 - ❌ **Failed-Actions detection on real data** (no failing repo was found among the 32 checked; proven only against a fake API in 45 automated checks), and everything that needs a **GitHub token**: private repos, Dependabot, the raised API budget.
 - ❌ **Off-device backup** (destination undecided); backup timer's **first automatic run** (next: 03:30 UTC).
@@ -177,7 +177,7 @@ AI モデルは動かさず、**有料の LLM API も使いません**。AI が�
 
 | # | できること | 使っているもの | 状態 |
 |---|---|---|---|
-| 1 | **毎朝（07:00 JST）の GitHub 日次レポート**：最近更新されたリポジトリ、新規・停滞中の Issue/PR、失敗した Actions、Dependabot アラート（トークン時）、前日との差分。NUC に保存 | n8n + Python（`github-dev-snapshot`） | ✅ 実データで動作（108リポジトリ）· ⬜ 定期実行の初回は未観測 |
+| 1 | **毎朝（07:00 JST）の GitHub 日次レポート**：最近更新されたリポジトリ、新規・停滞中の Issue/PR、失敗した Actions、Dependabot アラート（トークン時）、前日との差分。NUC に保存 | n8n + Python（`github-dev-snapshot`） | ✅ n8n から実行成功（109リポジトリ）· ⬜ 定期実行の初回は未観測 |
 | 2 | **AI ツールからレポートを読み取り専用で参照**（認証・監査つきの1つの入口） | 自作 MCP サーバー | ✅ n8n から読み取り確認 |
 | 3 | **停止・障害の通知**：NUC、n8n、MCP、収集ジョブ、GitHub の重大な問題 | Uptime Kuma（＋Push監視） | ✅ 検知 · ⬜ **配送には通知チャネルの設定が必要** |
 | 4 | **「NUC 全体が落ちた」を外部から検知**（無料の dead-man's switch） | heartbeat スクリプト＋無料の外部チェック | 🟡 スクリプトは準備済み・**未有効化**（ping URL が必要） |
@@ -241,7 +241,7 @@ ssh -N -L 3001:127.0.0.1:3001 -L 5678:127.0.0.1:5678 <user>@<nuc-address>
 
 以下は「合格」として扱っていません。
 
-- ❌ 日次ワークフローの **07:00 JST 定期実行の初回**（有効だが未観測）。このワークフローの n8n *画面*からの実行も未実施。
+- ❌ 日次ワークフローの **07:00 JST 定期実行の初回**（*Published* 表示で、n8n 画面からの実行は成功したが、定期実行の発火は未観測）。
 - ❌ **通知の配送**（Kuma のチャネル未設定）、**Kuma Push** 経路（push トークンが必要）、**外部 heartbeat**（未有効化）。
 - ❌ **実データでの失敗 Actions の検知**（確認した32リポジトリに失敗中のものはなく、偽 API での自動テスト45項目でのみ確認）、および **GitHub トークン**が必要なもの全般（非公開リポジトリ、Dependabot、API 予算の拡大）。
 - ❌ **NUC 外バックアップ**（保存先未決定）、バックアップ timer の**初回の自動実行**（次回 03:30 UTC）。

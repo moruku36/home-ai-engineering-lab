@@ -126,9 +126,9 @@ cd ~/home-ai-lab/n8n
 | Report readable via MCP from n8n | ✅ verified |
 | Open WebUI stopped; data kept; stays stopped after backup | ✅ verified |
 | Collector logic (pagination, diff, alerts, retries, budget, same-day rule, retention, secrets not written, Kuma push) | ✅ 45 automated checks against a **fake** GitHub/Kuma (`tests/github_snapshot_test.py`) |
-| n8n workflow executed from the n8n screen | ⬜ not yet (rate limit was used up; run it after reset) |
-| **Scheduled 07:00 JST run** | ⬜ workflow is active; **first scheduled run not yet observed** |
-| Failed-Actions detection on real data | ⬜ none of the 32 checked repos was failing, so only the fake-API test proves it |
+| n8n workflow executed from the n8n screen | ✅ verified (2026-10-15): collect → *Job ok?* → *Summary* all green; `repos 109 \| open issues 3 \| open PRs 29 \| critical 0 \| API calls 45 \| PARTIAL DATA` (last commit 8/33 repos: unauthenticated budget) |
+| **Scheduled 07:00 JST run** | ⬜ workflow shows **Published**; **first scheduled run not yet observed** |
+| Failed-Actions detection on real data | ⬜ Actions were checked for all ~33 active repos in the n8n run and none was failing, so only the fake-API test proves detection |
 | Token path, private repos, Dependabot | ⬜ not tested (no token) |
 | Kuma push (heartbeat / down) end-to-end | ⬜ needs `set-kuma-push` |
 | Notification delivery (e-mail etc.) | ⬜ no channel configured |

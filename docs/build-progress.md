@@ -12,8 +12,8 @@
 | 完了条件 | 状態 | 根拠 |
 |---|---|---|
 | Open WebUI を停止し、復旧可能な状態で保存 | ✅ **実機** | `Exited (0)`、ボリューム `open-webui_open-webui-data`・`.env`・`secrets/` 保持、再起動方針 `unless-stopped`。復旧は `ops-open-webui.sh start`（**未実行**。再起動後も停止のままかも未確認） |
-| n8n による GitHub 情報取得 | ✅ 実機（収集ジョブ）／⬜ n8n画面からの日次ワークフロー実行は後述の最終確認欄 | ジョブを実機で実行：108リポジトリ、HTTP 200。既存の `GitHub repo metadata` ワークフローは n8n 画面から実行済み |
-| 複数リポジトリの情報収集 | ✅ **実機** | own 65 / fork 43、open issues 3、open PRs 16（own）。API 45回（無認証） |
+| n8n による GitHub 情報取得 | ✅ **実機** | n8n 画面から日次ワークフローを実行：収集 → Job ok? → Summary 成功（`repos 109 / open issues 3 / open PRs 29 / critical 0 / API 45回 / PARTIAL DATA`）。直前にジョブ単体でも成功（108リポジトリ） |
+| 複数リポジトリの情報収集 | ✅ **実機** | 109リポジトリ、open issues 3、open PRs 29（fork含む。own は16件）。API 45回（無認証）。最新コミットは 8/33 件のみ（無認証の予算）→ `PARTIAL` と明記 |
 | 日次 Markdown レポートの自動生成 | 🟨 | レポート生成は実機で成功。**07:00 JST の定期実行は有効化済みだが初回は未観測** |
 | GitHub Actions 失敗の検出 | 🟨 **ローカルのみ** | 偽 API の自動テストで検証。実データでは確認した32リポジトリに失敗中のものがなく、実証できていない |
 | 必要な異常通知の実装 | 🟨 | 検知（Kuma Push → down）は実装・テスト済み。**配送は未**（通知チャネル未設定、push トークン未登録） |
