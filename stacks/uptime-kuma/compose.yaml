@@ -16,6 +16,7 @@ services:
         gw_priority: 100     # keep the default route (and source IP) on 172.30.0.0/24 so the UFW rule for host:22 matches
       monitor:
         gw_priority: 0       # shared with n8n / open-webui so Kuma can probe them by name
+      mcp: {}                # internal-only network: Kuma may only probe http://mcp-server:8080/healthz
     security_opt:
       - no-new-privileges:true
     mem_limit: 512m
@@ -32,6 +33,9 @@ networks:
   monitor:
     external: true
     name: monitor-net
+  mcp:
+    external: true
+    name: mcp-net
 
 volumes:
   uptime-kuma-data:

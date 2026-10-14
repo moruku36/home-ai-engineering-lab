@@ -30,7 +30,7 @@ services:
       EXECUTIONS_DATA_PRUNE_MAX_COUNT: "2000"
     volumes:
       - n8n-data:/home/node/.n8n
-    networks: [internal, monitor]
+    networks: [internal, monitor, mcp]     # mcp: client of the internal read-only MCP server
     security_opt: ["no-new-privileges:true"]
     cap_drop: [ALL]
     mem_limit: 1g
@@ -66,6 +66,9 @@ networks:
   monitor:
     external: true
     name: monitor-net      # created by scripts/phase3-run.sh; shared with Uptime Kuma
+  mcp:
+    external: true
+    name: mcp-net          # internal-only network created by scripts/phase5-run.sh
 
 volumes:
   n8n-data:

@@ -1,0 +1,38 @@
+# Read-only MCP server. NO published ports and NO egress: it lives on an internal Docker network
+# (mcp-net) shared only with its clients (n8n, Open WebUI; Uptime Kuma for /healthz).
+# Tokens live in ./.env (chmod 600, never committed) - see .env.example.
+name: mcp
+services:
+  mcp-server:
+    build: ./mcp-server
+    image: home-ai-lab/mcp-server:1
+    container_name: mcp-server
+    restart: unless-stopped
+    environment:
+      MCP_TOKEN_N8N: ${MCP_TOKEN_N8N:?set in .env}
+      MCP_TOKEN_OPENWEBUI: ${MCP_TOKEN_OPENWEBUI:?set in .env}
+      MCP_TOOL_TIMEOUT: "5"
+    volumes:
+      - jobs-reports:/data/reports:ro      # n8n/python-jobs reports, read-only for MCP
+      - mcp-audit:/var/log/mcp             # audit.jsonl (rotating 5 MB x 5)
+    networks: [mcp]
+    read_only: true
+    tmpfs: ["/tmp:size=8m"]
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    mem_limit: 128m
+    pids_limit: 64
+    logging:
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+networks:
+  mcp:
+    external: true
+    name: mcp-net             # created by scripts/phase5-run.sh with --internal (no gateway: no internet, no host access)
+
+volumes:
+  jobs-reports:
+    external: true
+    name: n8n_jobs-reports
+  mcp-audit:
