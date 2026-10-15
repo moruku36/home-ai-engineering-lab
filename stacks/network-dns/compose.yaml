@@ -1,0 +1,23 @@
+# OPTIONAL trial only. No LAN listener, DHCP, router changes, host networking or capabilities.
+# Do not start until the operator has approved the scope and initial configuration.
+# Setup wizard at 127.0.0.1:13000 via existing SSH tunnel; configure admin HTTP on :3000.
+# Explicit test queries only: dig @127.0.0.1 -p 1053 example.com (on the NUC).
+services:
+  adguard-trial:
+    image: adguard/adguardhome:v0.107.79
+    profiles: [dns-trial]
+    restart: "no"
+    ports:
+      - "127.0.0.1:13000:3000/tcp"
+      - "127.0.0.1:1053:53/udp"
+      - "127.0.0.1:1053:53/tcp"
+    volumes:
+      - ./data/work:/opt/adguardhome/work
+      - ./data/conf:/opt/adguardhome/conf
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    pids_limit: 64
+    logging:
+      driver: json-file
+      options: {max-size: "1m", max-file: "1"}

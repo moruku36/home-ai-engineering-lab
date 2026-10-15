@@ -3,6 +3,7 @@
 Network visibility: [Phase 1–4 overview / 家庭ネットワーク可視化の概要](docs/network-visibility.md).
 **Phase 1・2 implementation in progress; deployment and display are not yet verified.**
 NUC metrics + owner-approved device inventory + a limited DNS trial; Phase 3 IDS and Phase 4 blocking are future work.
+Implementation, offline tests and approval-dependent deployment: [Phase 1・2 runbook](docs/network-visibility-runbook.md).
 
 **English** | [日本語](#日本語)
 

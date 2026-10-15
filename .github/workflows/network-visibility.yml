@@ -1,0 +1,29 @@
+name: Network visibility (offline)
+on:
+  pull_request:
+    paths:
+      - 'scripts/network_*.py'
+      - 'tests/network_visibility_test.py'
+      - 'stacks/observability/**'
+      - 'stacks/network-dns/**'
+      - 'docs/samples/network-*.json'
+      - '.github/workflows/network-visibility.yml'
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Synthetic unit tests (no network probes)
+        run: python3 -m unittest discover -s tests -p network_visibility_test.py -v
+      - name: Validate Compose files without starting services
+        run: |
+          cp stacks/observability/.env.example stacks/observability/.env
+          mkdir -p stacks/observability/data/textfile
+          docker compose -f stacks/observability/compose.yaml config -q
+          docker compose -f stacks/network-dns/compose.yaml --profile dns-trial config -q
+      - name: Scan repository for secrets
+        run: bash scripts/scan-secrets.sh

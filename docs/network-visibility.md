@@ -1,6 +1,7 @@
 # Home network visibility / 家庭ネットワーク可視化の概要
 
 **2026-10-15 — Phase 1・2を実装中。実機への適用・表示は未検証。**
+Implementation and verification: [Phase 1・2 runbook](network-visibility-runbook.md).
 This is a separate network roadmap; its phase numbers do not refer to the original lab build phases.
 既存ラボの構築Phaseとは別の番号です。まず概要をGitHubで共有し、その条件に沿って実装します。
 
