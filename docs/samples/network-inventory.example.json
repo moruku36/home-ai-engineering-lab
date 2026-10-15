@@ -1,0 +1,6 @@
+{
+  "devices": [
+    {"label": "example-server", "role": "Ubuntu host", "source": "manual, synthetic", "last_verified": "2026-10-15", "consent": true},
+    {"label": "example-test-client", "role": "owner test PC", "source": "manual, synthetic", "last_verified": "2026-10-15", "consent": true}
+  ]
+}

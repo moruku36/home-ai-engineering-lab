@@ -29,9 +29,13 @@ services:
     image: prom/node-exporter:v1.12.1
     container_name: node-exporter
     restart: unless-stopped
-    command: ["--path.rootfs=/host"]
+    command:
+      - --path.rootfs=/host
+      - --collector.textfile.directory=/textfile
     volumes:
       - /:/host:ro,rslave
+      # Host-side explicit NIC snapshots only; see docs/network-visibility-runbook.md.
+      - ./data/textfile:/textfile:ro
     # no published port: only Prometheus reaches it on the stack network
     security_opt: ["no-new-privileges:true"]
     mem_limit: 128m
