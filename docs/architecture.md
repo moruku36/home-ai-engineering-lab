@@ -1,6 +1,6 @@
 # Architecture / アーキテクチャ
 
-English first, Japanese below each section. Reflects the deployed state on 2026-10-15.
+English first, Japanese below each section. Reflects the deployed state on 2026-10-15; section 2b adds the OSS playground (partly deployed).
 各節は英語が先、日本語が後です。2026-10-15 時点の実機の状態を反映しています。
 
 ## 1. Roles / 役割分担
@@ -60,6 +60,63 @@ flowchart LR
 
 **EN:** You reach the UIs only through an SSH tunnel. Services nobody opens in a browser (python-jobs, MCP) publish no port at all. The only outbound traffic is the GitHub API, the optional heartbeat, and image pulls.
 **JA:** 画面付きサービスには SSH トンネル経由でのみ入ります。ブラウザで開かないもの（python-jobs、MCP）はポート自体を公開しません。外向き通信は GitHub API、任意の heartbeat、イメージ取得のみです。
+
+## 2b. Current lab with the OSS playground / 現在のラボ全体図（OSSプレイグラウンド込み）
+
+```mermaid
+flowchart LR
+  subgraph PC["Your PC"]
+    BR["Browser"]
+    SSH["SSH client (key auth)"]
+  end
+
+  subgraph NUC["NUC · Ubuntu Server 24.04 · Docker · LAN only (TCP 22 only)"]
+    direction TB
+    subgraph OPS["Always-on automation and monitoring (stacks/uptime-kuma, n8n, mcp)"]
+      KUMA["Uptime Kuma :3001"]
+      N8N["n8n :5678"]
+      PJ["python-jobs"]
+      MCP["MCP server (internal)"]
+    end
+    subgraph PLAY["OSS playground (stacks/observability, kubernetes)"]
+      PROM["Prometheus :9090"]
+      GRAF["Grafana :3000"]
+      NODE["node-exporter (no published port)"]
+      KIND["Kubernetes (kind)<br/>API 127.0.0.1:6443<br/>NOT RUN YET"]
+      KYV["Kyverno<br/>DESIGN ONLY"]
+    end
+    OWUI["Open WebUI<br/>stopped, data kept"]
+    BK[("Encrypted backup<br/>ops stacks only")]
+  end
+
+  GH["GitHub REST API (read-only)"]
+
+  BR -.-> SSH
+  SSH ==>|"TCP 22 + SSH tunnels to 127.0.0.1 UIs"| NUC
+  N8N -->|"07:00 JST"| PJ
+  PJ -->|"HTTPS GET"| GH
+  N8N --> MCP
+  PJ -->|"push up/down"| KUMA
+  KUMA -.->|"health checks (monitor-net)"| N8N
+  PROM -->|"scrape"| NODE
+  PROM -->|"scrape"| GRAF
+  PROM -->|"scrape itself"| PROM
+  GRAF -->|"datasource"| PROM
+  KIND --> KYV
+  KIND -.->|"planned: metrics path (design option A)"| PROM
+  OPS -.-> BK
+```
+
+| Product | Role | Status (see [build-progress.md](build-progress.md)) |
+|---|---|---|
+| Uptime Kuma | alerts, health checks | running (ops stack) |
+| Prometheus | metrics | started on the NUC; UI on loopback only; scrape targets not yet verified |
+| Grafana OSS | dashboards | started on the NUC; UI login and datasource not yet verified |
+| Kubernetes (kind) | throw-away cluster | defined, **not run** |
+| Kyverno | admission policies | **design only**: [playground-kyverno-design.md](playground-kyverno-design.md) |
+
+**EN:** The playground stack has its own network `172.33.0.0/24` and also joins `monitor-net`, so Kuma can probe it by name. Its volumes are **not** in the encrypted backup yet. Playground work (usage notes, vulnerability checks, fixes) is documented in [playground.md](playground.md) and `docs/playground/<product>.md`.
+**JA:** プレイグラウンドのスタックは専用ネットワーク `172.33.0.0/24` を持ち、`monitor-net` にも参加するため、Kuma から名前で監視できます。ボリュームは暗号化バックアップの**対象外**です。プレイグラウンドでの作業（感想・脆弱性診断・修正）は [playground.md](playground.md) と `docs/playground/<製品>.md` に記録します。
 
 ## 3. Networks and exposure / ネットワークと公開範囲
 
