@@ -1,9 +1,10 @@
 # Playground: Prometheus + Grafana (+ node-exporter). LAN/SSH-tunnel only.
 # UIs are bound to loopback. Access: ssh -L 9090:127.0.0.1:9090 -L 3000:127.0.0.1:3000
+# Images: exact tags tested on the NUC 2026-10-15 (digests in docs/playground/). Bump deliberately.
 # Secrets: copy .env.example to .env (chmod 600) - never commit .env.
 services:
   prometheus:
-    image: prom/prometheus:v3
+    image: prom/prometheus:v3.15.0
     container_name: prometheus
     restart: unless-stopped
     command:
@@ -25,7 +26,7 @@ services:
       options: { max-size: "10m", max-file: "3" }
 
   node-exporter:
-    image: prom/node-exporter:v1
+    image: prom/node-exporter:v1.12.1
     container_name: node-exporter
     restart: unless-stopped
     command: ["--path.rootfs=/host"]
@@ -38,7 +39,7 @@ services:
     logging: *log
 
   grafana:
-    image: grafana/grafana-oss:12
+    image: grafana/grafana-oss:12.4.3   # "12" alone is not published on Docker Hub
     container_name: grafana
     restart: unless-stopped
     env_file: .env

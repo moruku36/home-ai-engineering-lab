@@ -132,7 +132,7 @@ Details, incidents and fixes: [docs/build-progress.md](docs/build-progress.md).
 ### Repository layout
 
 ```text
-stacks/          Docker Compose stacks: uptime-kuma, n8n (+python-jobs), open-webui (stopped), mcp, observability (Prometheus+Grafana, not yet run), kubernetes (kind config, not yet run)
+stacks/          Docker Compose stacks: uptime-kuma, n8n (+python-jobs), open-webui (stopped), mcp, observability (Prometheus+Grafana, running), kubernetes (kind config, not yet run)
 scripts/         Re-runnable setup / ops / backup scripts (run on the NUC); playground-run.sh starts the OSS playground; scan-secrets.sh runs anywhere
 tests/           Local tests: MCP server (34 checks), GitHub collector (45 checks, fake GitHub)
 docs/            Design, operations and progress notes (index: docs/README.md)
@@ -140,7 +140,7 @@ docs/            Design, operations and progress notes (index: docs/README.md)
 
 ### OSS playground
 
-The lab is also a **playground for open-source products**: run them, write down impressions, run vulnerability checks inside the lab, and prepare bug fixes for upstream. Planned set: **Uptime Kuma** (running), **Prometheus**, **Grafana**, **Kubernetes (kind)**, **Kyverno** (design only: [docs/playground-kyverno-design.md](docs/playground-kyverno-design.md)). Definitions and the start script are in the repo; **the new three have not been run on the NUC yet**. Details and rules: [docs/playground.md](docs/playground.md).
+The lab is also a **playground for open-source products**: run them, write down impressions, run vulnerability checks inside the lab, and prepare bug fixes for upstream. Products: **Uptime Kuma** (running), **Prometheus** and **Grafana** (running on the NUC since 2026-10-15; scrape targets and the Grafana UI not yet checked), **Kubernetes (kind)** (not run yet), **Kyverno** (design only: [docs/playground-kyverno-design.md](docs/playground-kyverno-design.md)). Per-product notes: [docs/playground/](docs/playground/). Details and rules: [docs/playground.md](docs/playground.md).
 
 ### Documentation
 
@@ -259,7 +259,7 @@ ssh -N -L 3001:127.0.0.1:3001 -L 5678:127.0.0.1:5678 <user>@<nuc-address>
 ### リポジトリ構成
 
 ```text
-stacks/          Docker Composeスタック：uptime-kuma, n8n(+python-jobs), open-webui(停止中), mcp, observability(Prometheus+Grafana・未実行), kubernetes(kind設定・未実行)
+stacks/          Docker Composeスタック：uptime-kuma, n8n(+python-jobs), open-webui(停止中), mcp, observability(Prometheus+Grafana・稼働中), kubernetes(kind設定・未実行)
 scripts/         再実行可能な構築・運用・バックアップ用スクリプト（NUC上で実行）。scan-secrets.sh はどこでも実行可
 tests/           ローカルテスト：MCPサーバー(34項目)、GitHub収集(45項目・偽GitHub)
 docs/            設計・運用・進捗（索引：docs/README.md）
@@ -267,7 +267,7 @@ docs/            設計・運用・進捗（索引：docs/README.md）
 
 ### OSS プレイグラウンド
 
-このラボは **OSS 製品のプレイグラウンド**も兼ねます。動かす → 感想を残す → ラボ内で脆弱性診断 → 上流向けのバグ修正を用意、という使い方です。対象は **Uptime Kuma**（稼働中）・**Prometheus**・**Grafana**・**Kubernetes (kind)**・**Kyverno**（設計のみ：[docs/playground-kyverno-design.md](docs/playground-kyverno-design.md)）。定義と起動スクリプトはリポジトリにあります。**新しい3つは NUC 上ではまだ実行していません**。詳細とルール：[docs/playground.md](docs/playground.md)
+このラボは **OSS 製品のプレイグラウンド**も兼ねます。動かす → 感想を残す → ラボ内で脆弱性診断 → 上流向けのバグ修正を用意、という使い方です。対象は **Uptime Kuma**（稼働中）・**Prometheus** と **Grafana**（2026-10-15 から NUC 上で稼働中。収集対象と Grafana 画面は未確認）・**Kubernetes (kind)**（未実行）・**Kyverno**（設計のみ：[docs/playground-kyverno-design.md](docs/playground-kyverno-design.md)）。製品ごとのメモ：[docs/playground/](docs/playground/)。詳細とルール：[docs/playground.md](docs/playground.md)
 
 ### 原則
 
