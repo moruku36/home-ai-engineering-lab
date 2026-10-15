@@ -1,0 +1,73 @@
+# Playground: Prometheus + Grafana (+ node-exporter). LAN/SSH-tunnel only.
+# UIs are bound to loopback. Access: ssh -L 9090:127.0.0.1:9090 -L 3000:127.0.0.1:3000
+# Secrets: copy .env.example to .env (chmod 600) - never commit .env.
+services:
+  prometheus:
+    image: prom/prometheus:v3
+    container_name: prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    ports:
+      - "127.0.0.1:9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    networks: [default, monitor]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    pids_limit: 256
+    logging: &log
+      driver: json-file
+      options: { max-size: "10m", max-file: "3" }
+
+  node-exporter:
+    image: prom/node-exporter:v1
+    container_name: node-exporter
+    restart: unless-stopped
+    command: ["--path.rootfs=/host"]
+    volumes:
+      - /:/host:ro,rslave
+    # no published port: only Prometheus reaches it on the stack network
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 128m
+    pids_limit: 64
+    logging: *log
+
+  grafana:
+    image: grafana/grafana-oss:12
+    container_name: grafana
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      GF_SERVER_HTTP_ADDR: "0.0.0.0"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    depends_on: [prometheus]
+    networks: [default, monitor]
+    security_opt: ["no-new-privileges:true"]
+    mem_limit: 512m
+    pids_limit: 256
+    logging: *log
+
+networks:
+  default:
+    ipam:
+      config:
+        - subnet: 172.33.0.0/24
+  monitor:
+    external: true
+    name: monitor-net
+
+volumes:
+  prometheus-data:
+  grafana-data:
