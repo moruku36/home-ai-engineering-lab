@@ -7,9 +7,9 @@
 | Component | Version |
 |---|---|
 | kind | `v0.27.0` (go1.23.6, pinned in `scripts/playground-run.sh`) |
-| Node image | `kindest/node:v1.32.2` (kind's default for v0.27.0) |
+| Node image | `kindest/node:v1.32.2` (kind's default for v0.27.0; now pinned by digest in the script) |
 | Kubernetes server | `v1.32.2`, containerd `2.0.2`, Debian 12 node image |
-| kubectl (client) | `v1.37.1` (the script installs the current `stable.txt` release) |
+| kubectl (client) | `v1.37.1` in this run (the script then installed the current `stable.txt` release). The script now pins `v1.32.13` — fixed in repo, not re-run on the NUC |
 
 Config: `stacks/kubernetes/kind-config.yaml`. Kubeconfig: `~/.kube-playground` (mode `-rw-------`).
 
@@ -30,8 +30,8 @@ Config: `stacks/kubernetes/kind-config.yaml`. Kubeconfig: `~/.kube-playground` (
 
 ## Findings
 
-- **Lab issue (not fixed yet): kubectl/server version skew.** The script installs the latest stable kubectl (`v1.37.1`), while kind `v0.27.0` creates a `v1.32.2` cluster. kubectl only supports ±1 minor version against the API server, so this is outside the supported range. Basic `get` commands worked. Fix options: pin kubectl to the cluster's minor version, or bump kind (and the node image) together with kubectl.
-- **Worker `NotReady` right after the script.** `--wait 180s` waits for the control-plane only, so the script's `kubectl get nodes` can show the worker as `NotReady`. It became `Ready` within about 1.5 min. Not a bug, but the script output looks like a failure; waiting with `kubectl wait --for=condition=Ready node --all` would make it clearer.
+- **Lab issue (fixed in repo, not re-run on the NUC): kubectl/server version skew.** The script installed the latest stable kubectl (`v1.37.1`), while kind `v0.27.0` creates a `v1.32.2` cluster. kubectl only supports ±1 minor version against the API server, so this was outside the supported range (basic `get` commands still worked). The script now pins `KUBECTL_VERSION=v1.32.13` (sha256-checked as before) and passes `--image kindest/node:v1.32.2@sha256:f226…3142f` to `kind create`, so the three versions are changed together. An already-installed kubectl of a different version (such as the `v1.37.1` on the NUC) is replaced on the next run.
+- **Worker `NotReady` right after the script (fixed in repo, not re-run on the NUC).** `--wait 180s` waits for the control-plane only, so the script's `kubectl get nodes` could show the worker as `NotReady`. It became `Ready` within about 1.5 min. The script now runs `kubectl wait --for=condition=Ready node --all --timeout=180s` before `kubectl get nodes`, and prints `kubectl version` (client and server) at the end.
 - Nodes run as privileged containers on the NUC's Docker (by design of kind). Treat the cluster as disposable.
 
 ## Upstream issues / PRs
