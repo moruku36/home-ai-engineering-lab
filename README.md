@@ -1,5 +1,9 @@
 # Home AI Engineering Lab
 
+Network visibility: [Phase 1–4 overview / 家庭ネットワーク可視化の概要](docs/network-visibility.md).
+**Phase 1・2 implementation in progress; deployment and display are not yet verified.**
+NUC metrics + owner-approved device inventory + a limited DNS trial; Phase 3 IDS and Phase 4 blocking are future work.
+
 **English** | [日本語](#日本語)
 
 > **Status (2026-10-15):** An always-on, **zero-extra-cost** automation and monitoring box. Open WebUI is **stopped on purpose** (data kept). A daily GitHub report is generated; **notifications are not delivered yet** (no channel configured), the **first scheduled run is not yet observed**, and **off-device backup is still missing**. See [What is *not* verified](#what-is-not-verified-yet).
