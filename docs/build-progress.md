@@ -1,6 +1,6 @@
 # Build progress & Final Report / 構築進捗・最終報告 (2026-10-15)
 
-最終更新: 2026-10-15 JST（追加フェーズを §0 に追記、OSS プレイグラウンドの初回起動を §0.5 に追記）。Phase 0〜Phase 5 の導入および実機検証結果を統合した最終報告。実機での検証が済んでいない項目は合格扱いとせず、「未検証・未実施の項目」に分離して記録している。
+最終更新: 2026-10-15 JST（追加フェーズを §0 に追記、OSS プレイグラウンドの初回起動と追加検証を §0.5 に追記）。Phase 0〜Phase 5 の導入および実機検証結果を統合した最終報告。実機での検証が済んでいない項目は合格扱いとせず、「未検証・未実施の項目」に分離して記録している。
 
 ## 0. 追加フェーズ：運用基盤の改善（2026-10-15）— **最新**
 
@@ -53,9 +53,9 @@
 | 6 | （任意）読み取り専用 GitHub トークン → 非公開リポジトリ・Dependabot・予算拡大 | あなた |
 | 7 | 再起動後も Open WebUI が停止のままか確認（次回の計画再起動時） | 次回 |
 
-### 0.5 OSS プレイグラウンド：Prometheus＋Grafana の初回起動（2026-10-15）
+### 0.5 OSS プレイグラウンド：Prometheus＋Grafana の初回起動と kind（2026-10-15）
 
-**EN summary:** Prometheus v3.15.0, Grafana OSS 12.4.3 and node-exporter v1.12.1 were started on the NUC with `scripts/playground-run.sh observability`. Health checks pass and both UIs listen on `127.0.0.1` only. The first start failed because `grafana/grafana-oss:12` does not exist on Docker Hub; all three images are now pinned to exact tags. Scrape targets, the Grafana UI and kind are **not yet verified**.
+**EN summary:** Prometheus v3.15.0, Grafana OSS 12.4.3 and node-exporter v1.12.1 were started on the NUC with `scripts/playground-run.sh observability`. Health checks pass and both UIs listen on `127.0.0.1` only. The first start failed because `grafana/grafana-oss:12` does not exist on Docker Hub; all three images are now pinned to exact tags. A follow-up check the same day (clone synced to `main` after PR #8) confirmed all three scrape targets `up`, Grafana admin login and a query through the Prometheus data source, and a 2-node kind cluster (`v1.32.2`, both `Ready`) with the API on `127.0.0.1:6443` only. Found: kubectl `v1.37.1` vs cluster `v1.32.2` (outside the supported skew, not fixed yet). Not yet tried: browser UIs, dashboards, workloads on kind.
 
 | 項目 | 状態 | 根拠 |
 |---|---|---|
@@ -63,16 +63,24 @@
 | Grafana 起動 | ✅ **実機** | `GET /api/health` → `database: ok`、`version: 12.4.3` |
 | loopback 限定 | ✅ **実機** | `docker port` と `ss -ltn` で `127.0.0.1:9090`・`127.0.0.1:3000` のみ。node-exporter は公開ポートなし |
 | 資源使用量 | ✅ **実機**（起動直後） | prometheus 31MiB／grafana 108MiB／node-exporter 3.5MiB。ホスト使用量 1.4 → 1.8GiB（30GiB 中） |
-| 収集対象（prometheus・node・grafana）の取得 | ⬜ **未確認** | 起動5秒後の照会ではすべて `health: unknown`（初回の収集前。間隔30秒）。`/targets` で要確認 |
-| Grafana へのログイン・データソース・ダッシュボード | ⬜ 未確認 | 管理者パスワードは `stacks/observability/.env`（`chmod 600`、非表示） |
-| Kubernetes (kind) | ⬜ 未実行 | 今回は対象外 |
+| NUC 上の clone を main に同期 | ✅ **実機** | 手で書き換えていた `compose.yaml` を `git checkout` で戻し、`git pull --ff-only` で `52e156e`（PR #8 のマージ後）へ。作業ツリーはクリーン。`docker compose up -d` では再作成なし（タグは同一） |
+| 収集対象（prometheus・node・grafana）の取得 | ✅ **実機** | 起動約1時間後に `GET /api/v1/targets` で3つとも `health: up`、`lastError` なし。`up` クエリも3つとも `1`。（起動5秒後はまだ `unknown` だった） |
+| Grafana へのログイン | ✅ **実機**（HTTP API） | `POST /login`（ログイン画面と同じ窓口）で HTTP 200 `Logged in`。誤ったパスワードは 401。`/api/user` → `admin`、`isGrafanaAdmin=true`。パスワードは `.env` からシェル変数に読み、表示・ログ出力なし |
+| Grafana の Prometheus データソースでクエリ | ✅ **実機**（HTTP API） | データソース `Prometheus`（provisioning、既定）の health → `OK`。`POST /api/ds/query`（`up`）→ HTTP 200、3系列とも `1` |
+| Grafana のブラウザ画面・ダッシュボード | ⬜ 未確認 | SSH トンネル経由のブラウザ操作は未実施。ダッシュボードは未作成 |
+| Kubernetes (kind) の起動 | ✅ **実機** | `playground-run.sh kubernetes`：kind v0.27.0、`kindest/node:v1.32.2`。約1.5分後に2ノードとも `Ready`、システム Pod 11個すべて `Running`（スクリプト終了直後は worker が `NotReady`） |
+| kind API の待ち受け | ✅ **実機** | `ss -ltnp` と `docker port` で `127.0.0.1:6443` のみ。kubeconfig `~/.kube-playground` は `-rw-------` |
+| kind のメモリ | ✅ **実機** | control-plane 489MiB、worker 113MiB（コンテナ上限なし）。ホスト使用量 1.6 → 2.2GiB（31GiB 中）。見積もり 1.5〜2GB より小さい |
+| kind 上のワークロード | ⬜ 未確認 | Pod のデプロイ等は未実施 |
 | Prometheus/Grafana のボリュームの暗号化バックアップ | ⬜ 未対応 | 従来どおり対象外 |
 
 発見した問題と対処：
 
 1. **`grafana/grafana-oss:12` が Docker Hub に存在せず、初回の `docker compose up` が `not found` で失敗**（Grafana は `12.4.3` のような完全なバージョンしか公開していない）。3つのイメージを正確なタグに固定（`v3.15.0`／`12.4.3`／`v1.12.1`）。digest は [playground/prometheus.md](playground/prometheus.md)・[playground/grafana.md](playground/grafana.md) に記録。上流の不具合ではなく、このラボの定義の誤り。
 2. **NUC 上にこのリポジトリの clone がなかった**（常設スタックは `~/home-ai-lab` にファイル単位で配置）。公開リポジトリを `~/home-ai-engineering-lab` に clone して実行。手順を [playground.md](playground.md) に追記。
-3. SSH の LoginGraceTime が短いため、鍵のパスフレーズ入力が遅れると接続が切られる（`Connection closed`）。手順上の注意として記録（設定は変更していない）。
+3. **kubectl とクラスタのバージョン差がサポート範囲外**：スクリプトは最新の stable の kubectl（`v1.37.1`）を入れるが、kind v0.27.0 が作るクラスタは `v1.32.2`（kubectl のサポートは ±1 マイナー）。`get` 系は動いたが、**未修正**。kubectl をクラスタに合わせて固定するか、kind・ノードイメージと一緒に上げる。詳細は [playground/kubernetes.md](playground/kubernetes.md)。
+4. `kind create --wait` は control-plane だけを待つため、スクリプト直後の `kubectl get nodes` で worker が `NotReady` と出る（約1.5分で `Ready`）。失敗ではない。
+5. SSH の LoginGraceTime が短いため、鍵のパスフレーズ入力が遅れると接続が切られる（`Connection closed`）。手順上の注意として記録（設定は変更していない）。
 
 ---
 

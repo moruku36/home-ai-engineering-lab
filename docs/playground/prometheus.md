@@ -1,6 +1,6 @@
 # Prometheus (+ node-exporter) — playground note
 
-**Status:** running on the NUC since 2026-10-15 (first start). Scraping of the targets is **not yet confirmed** (see below).
+**Status:** running on the NUC since 2026-10-15. All three scrape targets (`prometheus`, `node`, `grafana`) are `up` (checked about 1 h after start).
 
 ## Version tested
 
@@ -15,11 +15,15 @@ Stack: `stacks/observability`, started with `bash scripts/playground-run.sh obse
 
 | Check | Result |
 |---|---|
+| Clone synced to `main` (`52e156e`, after PR #8); `docker compose up -d` recreated nothing | ✅ |
 | `GET /-/ready` from the host | ✅ HTTP 200 (also the script's in-container check: `prometheus: ready`) |
 | Published port | ✅ `127.0.0.1:9090` only (`docker port`, `ss -ltn`) |
 | node-exporter port | ✅ not published (`9100/tcp` inside the stack network only) |
 | Memory | prometheus 31 MiB / 512 MiB limit, node-exporter 3.5 MiB / 128 MiB, a few seconds after start |
-| Scrape targets (`prometheus`, `node`, `grafana`) | ⬜ **not confirmed**: queried 5 s after start, all three were still `health: unknown` (first scrape not done; interval 30 s). Check `http://localhost:9090/targets` through the SSH tunnel |
+| Scrape targets (`prometheus`, `node`, `grafana`) | ✅ all `health: up`, `lastError` empty (`GET /api/v1/targets`, about 1 h after start). Scrape durations 6 ms / 37 ms / 11 ms. Right after start (5 s) they were still `unknown` because the first scrape (interval 30 s) had not run |
+| `up` query | ✅ `GET /api/v1/query?query=up` → `1` for all three jobs |
+| Memory after 1 h | prometheus 51 MiB / 512 MiB, node-exporter 9 MiB / 128 MiB |
+| Web UI in a browser (`/targets` through the SSH tunnel) | ⬜ not opened; checked through the HTTP API on the NUC only |
 
 ## Impressions
 
