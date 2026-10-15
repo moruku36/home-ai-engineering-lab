@@ -55,7 +55,7 @@
 
 ### 0.5 OSS プレイグラウンド：Prometheus＋Grafana の初回起動と kind（2026-10-15）
 
-**EN summary:** Prometheus v3.15.0, Grafana OSS 12.4.3 and node-exporter v1.12.1 were started on the NUC with `scripts/playground-run.sh observability`. Health checks pass and both UIs listen on `127.0.0.1` only. The first start failed because `grafana/grafana-oss:12` does not exist on Docker Hub; all three images are now pinned to exact tags. A follow-up check the same day (clone synced to `main` after PR #8) confirmed all three scrape targets `up`, Grafana admin login and a query through the Prometheus data source, and a 2-node kind cluster (`v1.32.2`, both `Ready`) with the API on `127.0.0.1:6443` only. Found: kubectl `v1.37.1` vs cluster `v1.32.2` (outside the supported skew) and the worker shown `NotReady` right after the script; both fixed in repo (kubectl pinned to `v1.32.13`, node image pinned by digest, `kubectl wait` for all nodes), not re-run on the NUC. Not yet tried: browser UIs, dashboards, workloads on kind.
+**EN summary:** Prometheus v3.15.0, Grafana OSS 12.4.3 and node-exporter v1.12.1 were started on the NUC with `scripts/playground-run.sh observability`. Health checks pass and both UIs listen on `127.0.0.1` only. The first start failed because `grafana/grafana-oss:12` does not exist on Docker Hub; all three images are now pinned to exact tags. A follow-up check the same day (clone synced to `main` after PR #8) confirmed all three scrape targets `up`, Grafana admin login and a query through the Prometheus data source, and a 2-node kind cluster (`v1.32.2`, both `Ready`) with the API on `127.0.0.1:6443` only. Found: kubectl `v1.37.1` vs cluster `v1.32.2` (outside the supported skew) and the worker shown `NotReady` right after the script; both fixed in PR #12 (kubectl pinned to `v1.32.13`, node image pinned by digest, `kubectl wait` for all nodes) and **verified on the NUC** by recreating the cluster (07:47 UTC): kubectl replaced `v1.37.1` → `v1.32.13`, both nodes on the pinned digest and `Ready` before the script printed them, second run idempotent. Not yet tried: browser UIs, dashboards, workloads on kind.
 
 | 項目 | 状態 | 根拠 |
 |---|---|---|
@@ -68,7 +68,7 @@
 | Grafana へのログイン | ✅ **実機**（HTTP API） | `POST /login`（ログイン画面と同じ窓口）で HTTP 200 `Logged in`。誤ったパスワードは 401。`/api/user` → `admin`、`isGrafanaAdmin=true`。パスワードは `.env` からシェル変数に読み、表示・ログ出力なし |
 | Grafana の Prometheus データソースでクエリ | ✅ **実機**（HTTP API） | データソース `Prometheus`（provisioning、既定）の health → `OK`。`POST /api/ds/query`（`up`）→ HTTP 200、3系列とも `1` |
 | Grafana のブラウザ画面・ダッシュボード | ⬜ 未確認 | SSH トンネル経由のブラウザ操作は未実施。ダッシュボードは未作成 |
-| Kubernetes (kind) の起動 | ✅ **実機** | `playground-run.sh kubernetes`：kind v0.27.0、`kindest/node:v1.32.2`。約1.5分後に2ノードとも `Ready`、システム Pod 11個すべて `Running`（スクリプト終了直後は worker が `NotReady`） |
+| Kubernetes (kind) の起動 | ✅ **実機** | `playground-run.sh kubernetes`：kind v0.27.0、`kindest/node:v1.32.2`。約1.5分後に2ノードとも `Ready`、システム Pod 11個すべて `Running`（スクリプト終了直後は worker が `NotReady`）。**修正版（PR #12）で再作成**：31秒で完了、両ノードが `Ready` になってから表示 |
 | kind API の待ち受け | ✅ **実機** | `ss -ltnp` と `docker port` で `127.0.0.1:6443` のみ。kubeconfig `~/.kube-playground` は `-rw-------` |
 | kind のメモリ | ✅ **実機** | control-plane 489MiB、worker 113MiB（コンテナ上限なし）。ホスト使用量 1.6 → 2.2GiB（31GiB 中）。見積もり 1.5〜2GB より小さい |
 | kind 上のワークロード | ⬜ 未確認 | Pod のデプロイ等は未実施 |
@@ -78,8 +78,8 @@
 
 1. **`grafana/grafana-oss:12` が Docker Hub に存在せず、初回の `docker compose up` が `not found` で失敗**（Grafana は `12.4.3` のような完全なバージョンしか公開していない）。3つのイメージを正確なタグに固定（`v3.15.0`／`12.4.3`／`v1.12.1`）。digest は [playground/prometheus.md](playground/prometheus.md)・[playground/grafana.md](playground/grafana.md) に記録。上流の不具合ではなく、このラボの定義の誤り。
 2. **NUC 上にこのリポジトリの clone がなかった**（常設スタックは `~/home-ai-lab` にファイル単位で配置）。公開リポジトリを `~/home-ai-engineering-lab` に clone して実行。手順を [playground.md](playground.md) に追記。
-3. **kubectl とクラスタのバージョン差がサポート範囲外**：スクリプトは最新の stable の kubectl（`v1.37.1`）を入れるが、kind v0.27.0 が作るクラスタは `v1.32.2`（kubectl のサポートは ±1 マイナー）。`get` 系は動いた。**リポジトリで修正済み、実機では未再実行**：`playground-run.sh` で kubectl を `v1.32.13`（従来どおり sha256 検証）、ノードイメージを `kindest/node:v1.32.2`（digest 指定）に固定。別バージョンの kubectl が入っていれば次回実行時に入れ替える。詳細は [playground/kubernetes.md](playground/kubernetes.md)。
-4. `kind create --wait` は control-plane だけを待つため、スクリプト直後の `kubectl get nodes` で worker が `NotReady` と出る（約1.5分で `Ready`）。失敗ではない。**リポジトリで修正済み、実機では未再実行**：`kubectl wait --for=condition=Ready node --all --timeout=180s` を `kubectl get nodes` の前に追加。
+3. **kubectl とクラスタのバージョン差がサポート範囲外**：スクリプトは最新の stable の kubectl（`v1.37.1`）を入れるが、kind v0.27.0 が作るクラスタは `v1.32.2`（kubectl のサポートは ±1 マイナー）。`get` 系は動いた。**PR #12 で修正し、実機で確認済み**（07:47 UTC にクラスタを再作成。kubectl は `v1.37.1` → `v1.32.13` に入れ替わり、クライアント `v1.32.13`／サーバー `v1.32.2`。両ノードとも固定した digest のイメージで起動）：`playground-run.sh` で kubectl を `v1.32.13`（従来どおり sha256 検証）、ノードイメージを `kindest/node:v1.32.2`（digest 指定）に固定。別バージョンの kubectl が入っていれば次回実行時に入れ替える。詳細は [playground/kubernetes.md](playground/kubernetes.md)。
+4. `kind create --wait` は control-plane だけを待つため、スクリプト直後の `kubectl get nodes` で worker が `NotReady` と出る（約1.5分で `Ready`）。失敗ではない。**PR #12 で修正し、実機で確認済み**：`kubectl wait --for=condition=Ready node --all --timeout=180s` を `kubectl get nodes` の前に追加。再作成時は両ノードの `condition met` の後に `Ready` で表示された。2回目の実行も `cluster exists` で終了コード 0（kubectl の再入れ替えなし）。
 5. SSH の LoginGraceTime が短いため、鍵のパスフレーズ入力が遅れると接続が切られる（`Connection closed`）。手順上の注意として記録（設定は変更していない）。
 
 ---
