@@ -21,12 +21,28 @@ python scripts/network_report.py \
 AdGuardの`GET /control/querylog`のJSON（`data[].time/client/question.name`）を入力できますが、自動収集やAPI認証は今回追加していません。
 5 MiB超は拒否。APIのページング・長期間の完全取得は行わず、読み込んだ範囲だけを表示します。対象外の記録は表示から除外されるだけなので、取得元でも対象端末に限定してください。
 
-## 2. 実機の読み取り確認（未実行）
+## 2. 実機の読み取り確認
 
 既存の認証済みSSH接続を利用。known_hostsや認証設定は変更しません。接続先や秘密鍵をGitに書きません。
 現在のNUC cloneで`git status --short --branch`、`git log -1 --oneline`、`sudo docker compose ps`、`ip -br link`、`ss -ltn`を確認。
 結果のIP/MAC/ホスト名は公開しません。cloneに未commit変更があればpull/checkoutで上書きせず停止し、別の作業ディレクトリを準備します。
 ルータ/スイッチ機種、NIC用途、試験端末、DNS/DHCPの現状を本人に確認し、アドレス・NICを推測しません。
+
+### 読み取り確認の結果（2026-10-15）
+
+本人が既存の暗号化鍵をWindows OpenSSH agentへ登録後、登録済みhost keyを厳格確認し、agent forwardingなし・非対話SSHで接続に成功しました。秘密鍵本文・パスフレーズ・既存サービスの認証情報は読み取っていません。
+
+- Ubuntu 24.04.5 LTS、Docker 29.9.0、Compose 5.6.0。Dockerサービスはactive。
+- 物理有線NIC 1本がupでdefault routeもそのNIC、Wi-Fi NICはdown。実際のNIC名・IP/MACは公開せず、手順では`<approved-host-nic>`を使います。
+- NUC cloneは`main`、commit `04d3683`、作業ツリーclean。PR #14反映前なので、承認後の適用時に現行状態を再確認してからfast-forwardします。既存`.env`は存在のみ確認し、読み取り・生成・置換はしていません。
+- Prometheus ready、Grafana health正常（12.4.3）。既存収集先3件は全て`up`、errorなし。プロセス名の確認でもPrometheus/Grafana/node_exporter各1件を観測。Dockerの完全なcontainer一覧は権限不足のため未確認です。
+- 現行`node_network_receive_bytes_total`のdeviceはコンテナ側の`eth0`と`lo`。物理NICの通信量として扱わず、Phase 1では既存exporterへホストsnapshotだけを追加します。
+- 既存Kuma/n8n/Prometheus/Grafana/kind APIのTCP listenerはloopback。SSHは通常の22番。DNSの既存TCP53 listenerもloopback。試験用TCP/UDP1053とTCP13000の既存待受は観測されませんでした（適用直前に再確認）。Open WebUIの8300 listenerは確認されず、既存の停止記録と整合します。
+- `sudo -n`と一般ユーザーのDocker API操作は利用不可。サービス操作には本人のsudo認証が必要です。sudo設定やdocker groupを変更していません。
+
+**今回の操作は読み取りのみです。** リポジトリ更新、コンテナ再作成、定期snapshot、端末探索、DNS試験、管理者作成は行っていません。
+Phase 1適用では既存Prometheusを維持し、対象NICのsnapshotとnode-exporter/Grafanaだけの再作成（短時間の表示・収集中断あり）を具体承認の対象にします。Phase 2の管理者作成・限定DNS試験は別の承認対象です。
+作業終了後は本人がagentから対象公開鍵を指定して登録を除き、他の用途がなければagentを停止します。Manualの起動種別は維持し、鍵の暗号化は変更しません。
 
 ## 3. Phase 1: ホストのNIC数値を正しく渡す（承認後）
 
@@ -105,8 +121,8 @@ query logをローカルのGit管理外ファイルに保存し、`network_repor
 | 概要文書を先にGitHub公開 | PR #14の最初のcommit `23c2f73` |
 | コード・ダッシュボード・DNS Compose雛形 | PR上の実装。自動deployしない |
 | ホストcounter/対象限定/失敗時の振舞い、DNS集計・時刻・HTML escape | 合成データのunit testで検証（結果はPR） |
-| NUC実接続・現在の作業ツリー/NIC確認 | 未実施。手元SSH configにNUC aliasなし、agent接続不可。鍵を新規作成・解除していない |
-| Docker Composeの実行検証 / AdGuard image起動 | 未実施。この実行環境にDocker CLIなし |
+| NUC実接続・現在の作業ツリー/NIC確認 | 既存agentで読み取り確認済み。上記の結果参照。適用直前に再確認する |
+| Docker Compose構成検証 / AdGuard image起動 | 両Composeのconfigは[Linux CIで成功](https://github.com/moruku36/home-ai-engineering-lab/actions/runs/38719281759)。実機でのimage起動は未実施 |
 | NUC上の収集・稼働、Grafanaブラウザ表示 | 未実施。実機確認後に記録する |
 | 家庭端末一覧の自動取得、ルータflow、Phase 3・4 | 未実装。範囲・機器確認または将来作業 |
 
