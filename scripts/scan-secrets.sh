@@ -15,7 +15,7 @@ ID_RE='\b(192\.168|10\.[0-9]{1,3})\.[0-9]{1,3}\.[0-9]{1,3}\b(?!/)|\b([0-9A-Fa-f]
 NAME_RE='(^|/)(\.env(\..*)?|id_(rsa|ed25519|ecdsa)(\.pub)?|.*\.(pem|key|ppk|p12|pfx|sqlite3?|db))$|(^|/)secrets/|backup-identity'
 
 # Known harmless examples / documentation placeholders
-ALLOW='192\.168\.1\.50|\.env\.example|<64 hex|<[a-z-]+>|github_pat_TESTTOKEN0123456789abcdef|^docs/playground/[^:]+:[0-9]+:.*`sha256:[0-9a-f]{64}`'   # dummy token used only by tests/github_snapshot_test.py; public container image digests in playground notes
+ALLOW='192\.168\.1\.50|\.env\.example|<64 hex|<[a-z-]+>|github_pat_TESTTOKEN0123456789abcdef|^docs/playground/[^:]+:[0-9]+:.*`sha256:[0-9a-f]{64}`|^scripts/playground-run\.sh:[0-9]+:.*kindest/node:v[0-9.]+@sha256:[0-9a-f]{64}'   # dummy token used only by tests/github_snapshot_test.py; public container image digests in playground notes and the pinned kind node image
 
 FLAG=$(mktemp -u)   # report() runs inside pipelines (subshells), so signal findings via a file
 trap 'rm -f "$FLAG"' EXIT
