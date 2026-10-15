@@ -140,7 +140,7 @@ docs/            Design, operations and progress notes (index: docs/README.md)
 
 ### OSS playground
 
-The lab is also a **playground for open-source products**: run them, write down impressions, run vulnerability checks inside the lab, and prepare bug fixes for upstream. Planned set: **Uptime Kuma** (running), **Prometheus**, **Grafana**, **Kubernetes (kind)**. Definitions and the start script are in the repo; **the new three have not been run on the NUC yet**. Details and rules: [docs/playground.md](docs/playground.md).
+The lab is also a **playground for open-source products**: run them, write down impressions, run vulnerability checks inside the lab, and prepare bug fixes for upstream. Planned set: **Uptime Kuma** (running), **Prometheus**, **Grafana**, **Kubernetes (kind)**, **Kyverno** (design only: [docs/playground-kyverno-design.md](docs/playground-kyverno-design.md)). Definitions and the start script are in the repo; **the new three have not been run on the NUC yet**. Details and rules: [docs/playground.md](docs/playground.md).
 
 ### Documentation
 
@@ -267,7 +267,7 @@ docs/            設計・運用・進捗（索引：docs/README.md）
 
 ### OSS プレイグラウンド
 
-このラボは **OSS 製品のプレイグラウンド**も兼ねます。動かす → 感想を残す → ラボ内で脆弱性診断 → 上流向けのバグ修正を用意、という使い方です。対象は **Uptime Kuma**（稼働中）・**Prometheus**・**Grafana**・**Kubernetes (kind)**。定義と起動スクリプトはリポジトリにあります。**新しい3つは NUC 上ではまだ実行していません**。詳細とルール：[docs/playground.md](docs/playground.md)
+このラボは **OSS 製品のプレイグラウンド**も兼ねます。動かす → 感想を残す → ラボ内で脆弱性診断 → 上流向けのバグ修正を用意、という使い方です。対象は **Uptime Kuma**（稼働中）・**Prometheus**・**Grafana**・**Kubernetes (kind)**・**Kyverno**（設計のみ：[docs/playground-kyverno-design.md](docs/playground-kyverno-design.md)）。定義と起動スクリプトはリポジトリにあります。**新しい3つは NUC 上ではまだ実行していません**。詳細とルール：[docs/playground.md](docs/playground.md)
 
 ### 原則
 

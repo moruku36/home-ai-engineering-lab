@@ -15,6 +15,7 @@ English first, Japanese second. "Language" tells you what the document is writte
 | [ops-runbook.md](ops-runbook.md) | EN + JA | Stop/start, resource baseline, updates, manual recovery / 運用手順書 |
 | [offsite-backup-options.md](offsite-backup-options.md) | EN + JA | Off-device backup options (no decision made) / NUC外バックアップの選択肢 |
 | [playground.md](playground.md) | EN + JA | OSS playground: Prometheus, Grafana, Kubernetes (kind) / OSSプレイグラウンド |
+| [playground-kyverno-design.md](playground-kyverno-design.md) | EN + JA | Design for adding Kyverno (not implemented) / Kyverno追加の設計（未実装） |
 
 ## Operations (current) / 運用（最新）
 

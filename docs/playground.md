@@ -12,6 +12,7 @@ Besides the always-on monitoring box, the lab is a **playground for open-source 
 | Prometheus | metrics | `stacks/observability` → `127.0.0.1:9090` | ⬜ not run yet |
 | Grafana OSS | dashboards | `stacks/observability` → `127.0.0.1:3000` | ⬜ not run yet |
 | Kubernetes (kind) | throw-away cluster (1 control-plane + 1 worker) | `stacks/kubernetes` → API `127.0.0.1:6443` | ⬜ not run yet |
+| Kyverno | Kubernetes policy engine (5th product) | design only: [playground-kyverno-design.md](playground-kyverno-design.md) | 📝 designed, not implemented |
 
 Also in the stack: `node-exporter` (host metrics, no published port).
 
@@ -57,6 +58,7 @@ Grafana's admin password is generated into `stacks/observability/.env` (`chmod 6
 | Prometheus | メトリクス | `stacks/observability`（`127.0.0.1:9090`） | ⬜ 未実行 |
 | Grafana OSS | ダッシュボード | `stacks/observability`（`127.0.0.1:3000`） | ⬜ 未実行 |
 | Kubernetes (kind) | 使い捨てクラスタ（control-plane 1＋worker 1） | `stacks/kubernetes`（API `127.0.0.1:6443`） | ⬜ 未実行 |
+| Kyverno | Kubernetes ポリシーエンジン（5つ目） | [設計のみ](playground-kyverno-design.md) | 📝 設計済み・未実装 |
 
 ### 起動・停止（NUC 上）
 
