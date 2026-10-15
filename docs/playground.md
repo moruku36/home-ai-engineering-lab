@@ -11,7 +11,7 @@ Besides the always-on monitoring box, the lab is a **playground for open-source 
 | Uptime Kuma | monitoring / alerts (already in the lab) | `stacks/uptime-kuma` → `127.0.0.1:3001` | ✅ running (see README) |
 | Prometheus | metrics | `stacks/observability` → `127.0.0.1:9090` | ✅ running (v3.15.0) · ✅ 3 targets `up` — [note](playground/prometheus.md) |
 | Grafana OSS | dashboards | `stacks/observability` → `127.0.0.1:3000` | ✅ running (12.4.3) · ✅ login + data source query · ⬜ dashboards — [note](playground/grafana.md) |
-| Kubernetes (kind) | throw-away cluster (1 control-plane + 1 worker) | `stacks/kubernetes` → API `127.0.0.1:6443` | ✅ running (kind v0.27.0, k8s v1.32.2, 2 nodes `Ready`) · kubectl skew fixed in repo (pinned v1.32.13), not re-run — [note](playground/kubernetes.md) |
+| Kubernetes (kind) | throw-away cluster (1 control-plane + 1 worker) | `stacks/kubernetes` → API `127.0.0.1:6443` | ✅ running (kind v0.27.0, k8s v1.32.2, 2 nodes `Ready`) · kubectl pinned to v1.32.13 (verified on the NUC) — [note](playground/kubernetes.md) |
 | Kyverno | Kubernetes policy engine (5th product) | design only: [playground-kyverno-design.md](playground-kyverno-design.md) | 📝 designed, not implemented |
 
 Also in the stack: `node-exporter` (host metrics, no published port).
@@ -42,7 +42,7 @@ Grafana's admin password is generated into `stacks/observability/.env` (`chmod 6
 
 - Images are pinned to exact tags (`prom/prometheus:v3.15.0`, `grafana/grafana-oss:12.4.3`, `prom/node-exporter:v1.12.1`); the digests tested are in the per-product notes. Major-only tags were used before, but `grafana/grafana-oss:12` does not exist on Docker Hub and the first start failed. Bump tags deliberately and record the new version.
 - `node-exporter` mounts the host root read-only (needed for host metrics). Remove it if you don't need NUC metrics.
-- The script used to install the latest stable kubectl (v1.37.1 on 2026-10-15) while kind v0.27.0 creates a v1.32.2 cluster: outside kubectl's ±1 minor support. Fixed in repo, not re-run on the NUC: kubectl is pinned to v1.32.13 and the node image to `kindest/node:v1.32.2` (by digest). Bump `KIND_VERSION`, `KIND_NODE_IMAGE` and `KUBECTL_VERSION` together.
+- The script used to install the latest stable kubectl (v1.37.1 on 2026-10-15) while kind v0.27.0 creates a v1.32.2 cluster: outside kubectl's ±1 minor support. Fixed in PR #12 and verified on the NUC: kubectl is pinned to v1.32.13 and the node image to `kindest/node:v1.32.2` (by digest). Bump `KIND_VERSION`, `KIND_NODE_IMAGE` and `KUBECTL_VERSION` together.
 - kind runs Kubernetes nodes as privileged containers on the NUC's Docker; treat the cluster as disposable and don't run untrusted workloads that need host access.
 - Memory: limits are Prometheus 512 MB + Grafana 512 MB; measured right after start: about 31 MiB + 108 MiB + 4 MiB (node-exporter); host used memory 1.4 → 1.8 GiB of 30 GiB. After about 1 h: Prometheus 51 MiB, Grafana 98 MiB, node-exporter 9 MiB. kind (2 nodes, no container memory limit): control-plane 489 MiB + worker 113 MiB; host used memory 1.6 → 2.2 GiB.
 - Prometheus/Grafana volumes are not yet included in the encrypted backup scripts.
@@ -60,7 +60,7 @@ Grafana's admin password is generated into `stacks/observability/.env` (`chmod 6
 | Uptime Kuma | 監視・通知（既存） | `stacks/uptime-kuma` | ✅ 稼働中 |
 | Prometheus | メトリクス | `stacks/observability`（`127.0.0.1:9090`） | ✅ 稼働中（v3.15.0）· ✅ 収集対象3つ `up` — [メモ](playground/prometheus.md) |
 | Grafana OSS | ダッシュボード | `stacks/observability`（`127.0.0.1:3000`） | ✅ 稼働中（12.4.3）· ✅ ログイン・データソース経由のクエリ · ⬜ ダッシュボード — [メモ](playground/grafana.md) |
-| Kubernetes (kind) | 使い捨てクラスタ（control-plane 1＋worker 1） | `stacks/kubernetes`（API `127.0.0.1:6443`） | ✅ 稼働中（kind v0.27.0、k8s v1.32.2、2ノード `Ready`）· kubectl のバージョン差はリポジトリで修正済み（v1.32.13 に固定）、実機では未再実行 — [メモ](playground/kubernetes.md) |
+| Kubernetes (kind) | 使い捨てクラスタ（control-plane 1＋worker 1） | `stacks/kubernetes`（API `127.0.0.1:6443`） | ✅ 稼働中（kind v0.27.0、k8s v1.32.2、2ノード `Ready`）· kubectl を v1.32.13 に固定（実機で確認済み） — [メモ](playground/kubernetes.md) |
 | Kyverno | Kubernetes ポリシーエンジン（5つ目） | [設計のみ](playground-kyverno-design.md) | 📝 設計済み・未実装 |
 
 ### 起動・停止（NUC 上）
@@ -85,7 +85,7 @@ bash scripts/playground-run.sh all | status | down   # down でもボリュー�
 
 - イメージは正確なタグで固定（`prom/prometheus:v3.15.0`、`grafana/grafana-oss:12.4.3`、`prom/node-exporter:v1.12.1`）。digest は製品ごとのメモに記録。以前は major タグだったが、`grafana/grafana-oss:12` は Docker Hub に存在せず初回起動が失敗した。更新は意図して行い、バージョンを記録する。
 - node-exporter はホストのルートを読み取り専用でマウント（NUC のメトリクス用）。不要なら外す。
-- スクリプトは最新の stable の kubectl（2026-10-15 時点で v1.37.1）を入れていたが、kind v0.27.0 が作るクラスタは v1.32.2 で、kubectl のサポート範囲（±1 マイナー）外だった。リポジトリでは修正済み、実機では未再実行：kubectl を v1.32.13、ノードイメージを `kindest/node:v1.32.2`（digest 指定）に固定。上げるときは `KIND_VERSION`・`KIND_NODE_IMAGE`・`KUBECTL_VERSION` を一緒に変える。
+- スクリプトは最新の stable の kubectl（2026-10-15 時点で v1.37.1）を入れていたが、kind v0.27.0 が作るクラスタは v1.32.2 で、kubectl のサポート範囲（±1 マイナー）外だった。PR #12 で修正し、実機で確認済み：kubectl を v1.32.13、ノードイメージを `kindest/node:v1.32.2`（digest 指定）に固定。上げるときは `KIND_VERSION`・`KIND_NODE_IMAGE`・`KUBECTL_VERSION` を一緒に変える。
 - kind はNUCのDocker上でノードを特権コンテナとして動かす。使い捨て前提で、信頼できないワークロードは載せない。
 - メモリ上限は Prometheus 512MB＋Grafana 512MB。起動直後の実測は約 31MiB＋108MiB＋4MiB（node-exporter）、ホスト全体の使用量は 30GiB 中 1.4 → 1.8GiB。約1時間後は Prometheus 51MiB、Grafana 98MiB、node-exporter 9MiB。kind（2ノード、コンテナのメモリ上限なし）は control-plane 489MiB＋worker 113MiB、ホスト全体の使用量は 1.6 → 2.2GiB。
 - Prometheus/Grafana のボリュームは暗号化バックアップの対象にまだ入れていない。
