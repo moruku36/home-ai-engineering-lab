@@ -1,6 +1,6 @@
 # Build progress & Final Report / 構築進捗・最終報告 (2026-10-15)
 
-最終更新: 2026-10-15 JST（追加フェーズを §0 に追記）。Phase 0〜Phase 5 の導入および実機検証結果を統合した最終報告。実機での検証が済んでいない項目は合格扱いとせず、「未検証・未実施の項目」に分離して記録している。
+最終更新: 2026-10-15 JST（追加フェーズを §0 に追記、OSS プレイグラウンドの初回起動を §0.5 に追記）。Phase 0〜Phase 5 の導入および実機検証結果を統合した最終報告。実機での検証が済んでいない項目は合格扱いとせず、「未検証・未実施の項目」に分離して記録している。
 
 ## 0. 追加フェーズ：運用基盤の改善（2026-10-15）— **最新**
 
@@ -52,6 +52,27 @@
 | 5 | 外部 heartbeat を有効化（無料チェックを作成） | あなた |
 | 6 | （任意）読み取り専用 GitHub トークン → 非公開リポジトリ・Dependabot・予算拡大 | あなた |
 | 7 | 再起動後も Open WebUI が停止のままか確認（次回の計画再起動時） | 次回 |
+
+### 0.5 OSS プレイグラウンド：Prometheus＋Grafana の初回起動（2026-10-15）
+
+**EN summary:** Prometheus v3.15.0, Grafana OSS 12.4.3 and node-exporter v1.12.1 were started on the NUC with `scripts/playground-run.sh observability`. Health checks pass and both UIs listen on `127.0.0.1` only. The first start failed because `grafana/grafana-oss:12` does not exist on Docker Hub; all three images are now pinned to exact tags. Scrape targets, the Grafana UI and kind are **not yet verified**.
+
+| 項目 | 状態 | 根拠 |
+|---|---|---|
+| Prometheus 起動 | ✅ **実機** | `GET /-/ready` → 200（ホストから）。`prom/prometheus:v3.15.0` |
+| Grafana 起動 | ✅ **実機** | `GET /api/health` → `database: ok`、`version: 12.4.3` |
+| loopback 限定 | ✅ **実機** | `docker port` と `ss -ltn` で `127.0.0.1:9090`・`127.0.0.1:3000` のみ。node-exporter は公開ポートなし |
+| 資源使用量 | ✅ **実機**（起動直後） | prometheus 31MiB／grafana 108MiB／node-exporter 3.5MiB。ホスト使用量 1.4 → 1.8GiB（30GiB 中） |
+| 収集対象（prometheus・node・grafana）の取得 | ⬜ **未確認** | 起動5秒後の照会ではすべて `health: unknown`（初回の収集前。間隔30秒）。`/targets` で要確認 |
+| Grafana へのログイン・データソース・ダッシュボード | ⬜ 未確認 | 管理者パスワードは `stacks/observability/.env`（`chmod 600`、非表示） |
+| Kubernetes (kind) | ⬜ 未実行 | 今回は対象外 |
+| Prometheus/Grafana のボリュームの暗号化バックアップ | ⬜ 未対応 | 従来どおり対象外 |
+
+発見した問題と対処：
+
+1. **`grafana/grafana-oss:12` が Docker Hub に存在せず、初回の `docker compose up` が `not found` で失敗**（Grafana は `12.4.3` のような完全なバージョンしか公開していない）。3つのイメージを正確なタグに固定（`v3.15.0`／`12.4.3`／`v1.12.1`）。digest は [playground/prometheus.md](playground/prometheus.md)・[playground/grafana.md](playground/grafana.md) に記録。上流の不具合ではなく、このラボの定義の誤り。
+2. **NUC 上にこのリポジトリの clone がなかった**（常設スタックは `~/home-ai-lab` にファイル単位で配置）。公開リポジトリを `~/home-ai-engineering-lab` に clone して実行。手順を [playground.md](playground.md) に追記。
+3. SSH の LoginGraceTime が短いため、鍵のパスフレーズ入力が遅れると接続が切られる（`Connection closed`）。手順上の注意として記録（設定は変更していない）。
 
 ---
 

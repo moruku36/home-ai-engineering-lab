@@ -1,6 +1,6 @@
 # OSS Playground / OSS プレイグラウンド
 
-**Status: definitions and scripts are in this repo; they have NOT yet been run on the NUC.** Nothing below is counted as "verified" until you (or a later session on the NUC) run it and record the result in [build-progress.md](build-progress.md).
+**Status (2026-10-15): Prometheus + Grafana (+ node-exporter) are running on the NUC** (health checks and loopback-only ports verified; scrape targets and the Grafana UI not yet checked). **Kubernetes (kind) has not been run yet.** Results: [build-progress.md](build-progress.md) §0.5 and the per-product notes in [playground/](playground/).
 
 ## Purpose
 
@@ -9,14 +9,16 @@ Besides the always-on monitoring box, the lab is a **playground for open-source 
 | Product | Role | Where | Status |
 |---|---|---|---|
 | Uptime Kuma | monitoring / alerts (already in the lab) | `stacks/uptime-kuma` → `127.0.0.1:3001` | ✅ running (see README) |
-| Prometheus | metrics | `stacks/observability` → `127.0.0.1:9090` | ⬜ not run yet |
-| Grafana OSS | dashboards | `stacks/observability` → `127.0.0.1:3000` | ⬜ not run yet |
+| Prometheus | metrics | `stacks/observability` → `127.0.0.1:9090` | ✅ running (v3.15.0) · ⬜ targets not checked — [note](playground/prometheus.md) |
+| Grafana OSS | dashboards | `stacks/observability` → `127.0.0.1:3000` | ✅ running (12.4.3) · ⬜ UI not tried — [note](playground/grafana.md) |
 | Kubernetes (kind) | throw-away cluster (1 control-plane + 1 worker) | `stacks/kubernetes` → API `127.0.0.1:6443` | ⬜ not run yet |
 | Kyverno | Kubernetes policy engine (5th product) | design only: [playground-kyverno-design.md](playground-kyverno-design.md) | 📝 designed, not implemented |
 
 Also in the stack: `node-exporter` (host metrics, no published port).
 
 ## Start / stop (on the NUC)
+
+The NUC's always-on stacks live in `~/home-ai-lab` (deployed file by file, not a Git clone). The playground runs from a clone of this repo at `~/home-ai-engineering-lab` (`git clone https://github.com/moruku36/home-ai-engineering-lab.git`, then `git pull --ff-only` to update).
 
 ```bash
 bash scripts/playground-run.sh observability   # Prometheus + Grafana + node-exporter
@@ -38,15 +40,15 @@ Grafana's admin password is generated into `stacks/observability/.env` (`chmod 6
 
 ## Caveats
 
-- Image tags use major versions (`prom/prometheus:v3`, `grafana/grafana-oss:12`, `prom/node-exporter:v1`); pin exact digests when a test must be reproducible.
+- Images are pinned to exact tags (`prom/prometheus:v3.15.0`, `grafana/grafana-oss:12.4.3`, `prom/node-exporter:v1.12.1`); the digests tested are in the per-product notes. Major-only tags were used before, but `grafana/grafana-oss:12` does not exist on Docker Hub and the first start failed. Bump tags deliberately and record the new version.
 - `node-exporter` mounts the host root read-only (needed for host metrics). Remove it if you don't need NUC metrics.
 - kind runs Kubernetes nodes as privileged containers on the NUC's Docker; treat the cluster as disposable and don't run untrusted workloads that need host access.
-- Memory: Prometheus 512 MB + Grafana 512 MB + kind (2 nodes, roughly 1.5–2 GB) — check headroom with `scripts/ops-status.sh` first. Not measured yet.
+- Memory: limits are Prometheus 512 MB + Grafana 512 MB; measured right after start: about 31 MiB + 108 MiB + 4 MiB (node-exporter); host used memory 1.4 → 1.8 GiB of 30 GiB. kind (2 nodes, roughly 1.5–2 GB) not measured yet.
 - Prometheus/Grafana volumes are not yet included in the encrypted backup scripts.
 
 ## 日本語
 
-**状況：定義とスクリプトはリポジトリに追加済み。NUC 上ではまだ実行していません**（実行・記録するまで「検証済み」とは扱いません）。
+**状況（2026-10-15）：Prometheus＋Grafana（＋node-exporter）は NUC 上で稼働中**（ヘルスチェックと loopback 限定は確認済み。収集対象と Grafana 画面は未確認）。**Kubernetes (kind) は未実行**。結果：[build-progress.md](build-progress.md) §0.5、製品ごとのメモ [playground/](playground/)。
 
 ### 目的
 
@@ -55,12 +57,14 @@ Grafana's admin password is generated into `stacks/observability/.env` (`chmod 6
 | 製品 | 役割 | 場所 | 状態 |
 |---|---|---|---|
 | Uptime Kuma | 監視・通知（既存） | `stacks/uptime-kuma` | ✅ 稼働中 |
-| Prometheus | メトリクス | `stacks/observability`（`127.0.0.1:9090`） | ⬜ 未実行 |
-| Grafana OSS | ダッシュボード | `stacks/observability`（`127.0.0.1:3000`） | ⬜ 未実行 |
+| Prometheus | メトリクス | `stacks/observability`（`127.0.0.1:9090`） | ✅ 稼働中（v3.15.0）· ⬜ 収集対象は未確認 — [メモ](playground/prometheus.md) |
+| Grafana OSS | ダッシュボード | `stacks/observability`（`127.0.0.1:3000`） | ✅ 稼働中（12.4.3）· ⬜ 画面は未操作 — [メモ](playground/grafana.md) |
 | Kubernetes (kind) | 使い捨てクラスタ（control-plane 1＋worker 1） | `stacks/kubernetes`（API `127.0.0.1:6443`） | ⬜ 未実行 |
 | Kyverno | Kubernetes ポリシーエンジン（5つ目） | [設計のみ](playground-kyverno-design.md) | 📝 設計済み・未実装 |
 
 ### 起動・停止（NUC 上）
+
+常設スタックは `~/home-ai-lab`（ファイル単位で配置、Git clone ではない）。プレイグラウンドは、このリポジトリを `~/home-ai-engineering-lab` に clone して実行します（更新は `git pull --ff-only`）。
 
 ```bash
 bash scripts/playground-run.sh observability   # Prometheus + Grafana + node-exporter
@@ -78,8 +82,8 @@ bash scripts/playground-run.sh all | status | down   # down でもボリュー�
 
 ### 注意
 
-- イメージは major タグ。再現性が要るテストでは digest で固定。
+- イメージは正確なタグで固定（`prom/prometheus:v3.15.0`、`grafana/grafana-oss:12.4.3`、`prom/node-exporter:v1.12.1`）。digest は製品ごとのメモに記録。以前は major タグだったが、`grafana/grafana-oss:12` は Docker Hub に存在せず初回起動が失敗した。更新は意図して行い、バージョンを記録する。
 - node-exporter はホストのルートを読み取り専用でマウント（NUC のメトリクス用）。不要なら外す。
 - kind はNUCのDocker上でノードを特権コンテナとして動かす。使い捨て前提で、信頼できないワークロードは載せない。
-- メモリ目安は Prometheus 512MB＋Grafana 512MB＋kind（約1.5〜2GB）。未計測。先に `scripts/ops-status.sh` で余裕を確認。
+- メモリ上限は Prometheus 512MB＋Grafana 512MB。起動直後の実測は約 31MiB＋108MiB＋4MiB（node-exporter）、ホスト全体の使用量は 30GiB 中 1.4 → 1.8GiB。kind（約1.5〜2GB）は未計測。
 - Prometheus/Grafana のボリュームは暗号化バックアップの対象にまだ入れていない。
