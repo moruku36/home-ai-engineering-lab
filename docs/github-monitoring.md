@@ -140,3 +140,33 @@ cd ~/home-ai-lab/n8n
 # remove the secrets:  cd ~/home-ai-lab/n8n && ./jobs-admin.sh remove-github-token && ./jobs-admin.sh remove-kuma-push
 # the job itself is harmless when not called; reports/state are plain files in two volumes (nothing is deleted by this rollback)
 ```
+
+## 11. Scheduled run investigation (TASK-122, 2026-10-18)
+
+**Finding from source only:** `github-daily-report.json` specifies `0 7 * * *` and `Asia/Tokyo`. The committed JSON has `active: false`; that field does **not** establish the current state of the live n8n database. The deployment script imported the workflow, then suppressed errors from both its publish attempt and its active-state check. n8n's CLI documentation says imports deactivate workflows by default. Therefore a failed publication could have gone unnoticed while a manual run still worked. The live cause remains **unconfirmed** until the checks below are run on the NUC.
+
+The updated `scripts/ops-deploy.sh` fails if publication fails or the workflow is not active after restart. The job server now logs a safe `request started` marker before collection, so a hung job can be distinguished from a trigger that never called it. Neither change has been run on the NUC; applying them is a production change requiring approval. Do not rerun the whole deployment script just to inspect this issue: it also changes other services and invokes the report job.
+
+### Read-only evidence collection on the NUC
+
+1. In the n8n UI, open **GitHub daily report (read-only)** and record whether it is **Published**. Under **Executions**, filter for scheduled executions since 2026-10-15 and record start times, trigger, status, and failing node. A manual execution does not prove that the Schedule Trigger fired.
+2. Confirm container state without showing environment variables: `sudo docker ps --filter name=n8n --filter name=python-jobs --format '{{.Names}} {{.Status}}'`.
+3. Check only safe structured job-log fields. The following command omits request bodies, tokens, reports, and exception details:
+
+   ```bash
+   sudo docker logs --since 72h python-jobs 2>&1 | python3 -c 'import sys,json
+for line in sys.stdin:
+    try: d=json.loads(line)
+    except ValueError: continue
+    if d.get("msg") in ("request started","request","snapshot done","snapshot failed"):
+        print({k:d[k] for k in ("ts","msg","job","status","repos","calls","partial") if k in d})'
+   ```
+
+4. Locate the reports volume without opening report content: `sudo docker volume inspect n8n_jobs-reports --format '{{.Mountpoint}}'`. Run `sudo python3 scripts/github_daily_health.py --reports-dir "$(sudo docker volume inspect n8n_jobs-reports --format '{{.Mountpoint}}')"` from a checkout containing this script. Exit 0 means a dated report was written after 07:00 JST; exit 2 means missing/stale; exit 3 means a filesystem error. It checks the previous day until 09:00 JST, then the current day. **A fresh report may have come from a manual run.**
+5. If the UI shows a scheduled execution but no job request, inspect that execution's HTTP node and credential reference. If there is a job request with HTTP failure, inspect the selected execution status and safe job-log fields; do not export or paste credentials. If the workflow is unpublished or has no scheduled execution, check the publication history and n8n start/restart logs before changing it.
+
+**Detection deployment:** the health script can be run after 09:00 JST by an existing monitoring scheduler and its exit status routed to the existing alerting channel. This wiring and end-to-end notification have not been performed or verified. It is separate from the n8n scheduler, so it can detect a missing report when n8n itself never fires.
+
+**Approval boundary:** publishing or importing the live workflow, changing its schedule or credentials, manually executing it, and sending the report are production actions. Record the evidence above and obtain explicit approval for the smallest needed change. Never run `ops-deploy.sh` for diagnosis.
+
+**JA:** ソースでは07:00 JSTのcronを確認。保存JSONの`active: false`は実機の状態の証拠にはならない。旧配備スクリプトは公開失敗を無視し得たため修正した。実機の根本原因は未確定。上の読み取り調査の後、本番の公開・実行・監視設定には明示承認が必要。

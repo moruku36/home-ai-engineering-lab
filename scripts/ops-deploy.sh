@@ -36,11 +36,18 @@ echo "######## 3. import + activate the daily workflow"
 sudo docker cp workflows/github-daily-report.json n8n:/tmp/gdr.json
 sudo docker exec n8n n8n import:workflow --input=/tmp/gdr.json 2>&1 | grep -v 'license SDK'
 sudo docker exec n8n rm -f /tmp/gdr.json
-( sudo docker exec n8n n8n publish:workflow --id=GithubDailyRpt01 2>&1 || sudo docker exec n8n n8n update:workflow --id=GithubDailyRpt01 --active=true 2>&1 ) | grep -v 'license SDK' || true
+# Import deactivates workflows by default. Do not hide a publish failure: a
+# successful manual run would otherwise mask a missing scheduled trigger.
+sudo docker exec n8n n8n publish:workflow --id=GithubDailyRpt01 >/dev/null
 sudo docker restart n8n >/dev/null
 for i in $(seq 1 36); do sudo docker exec n8n wget -qO- http://127.0.0.1:5678/healthz >/dev/null 2>&1 && { echo "n8n: healthz OK"; break; }; sleep 5; done
 sudo docker exec n8n n8n list:workflow 2>&1 | grep -v 'license SDK'
-sudo docker exec n8n sh -c 'n8n list:workflow --active=true 2>&1 | grep -v "license SDK"' || true
+active_workflows=$(sudo docker exec n8n n8n list:workflow --active=true)
+if ! printf '%s\n' "$active_workflows" | grep -Fq 'GithubDailyRpt01'; then
+  echo 'ERROR: GitHub daily workflow is not active after restart; scheduled reports will not run' >&2
+  exit 1
+fi
+echo 'GitHub daily workflow active after restart'
 
 echo "######## 4. run the snapshot job once (inside python-jobs; token read from its env, never printed)"
 sudo docker exec -i python-jobs python - <<'PY'
