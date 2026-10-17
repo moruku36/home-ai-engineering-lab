@@ -136,6 +136,7 @@ class Handler(BaseHTTPRequestHandler):
             if fn is None:
                 status = 404
                 return self._send(404, {"ok": False, "error": "unknown job"})
+            log("info", "request started", job=job)
             try:
                 n = int(self.headers.get("Content-Length", "0"))
                 if n > MAX_BODY:
