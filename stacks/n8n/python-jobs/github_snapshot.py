@@ -149,10 +149,40 @@ class GH:
         return out
 
 
+OPEN_SEARCH_PAGES = 5                  # pages of 100 read per open-item search: 500 items at most
+
+
+def search_all(gh, params, max_pages=OPEN_SEARCH_PAGES):
+    """Every page of one /search/issues query, up to max_pages. Returns (items, why_incomplete).
+    why_incomplete is None only when everything GitHub reports for the query was read. The search API returns at most 1000 results
+    and may set incomplete_results after a timeout, and total_count may be missing: whenever completeness cannot be shown,
+    the items are a LOWER BOUND and the reason says why (a run that stops exactly at the page limit is treated the same way)."""
+    per = int(params.get("per_page", 30))
+    items, total, flagged, exhausted = [], None, False, False
+    for page in range(1, max_pages + 1):
+        _, data = gh.get("/search/issues", dict(params, page=page))
+        batch = data.get("items") or []
+        items.extend(batch)
+        total = data["total_count"] if isinstance(data.get("total_count"), int) else total
+        flagged = flagged or bool(data.get("incomplete_results"))
+        if len(batch) < per:
+            exhausted = True
+            break
+    if flagged:
+        return items, "GitHub reported incomplete_results (the search timed out)"
+    if total is not None:
+        if len(items) < total:
+            return items, f"only {len(items)} of {total} matching items were read (at most {max_pages} pages of {per}; GitHub search returns at most 1000)"
+        return items, None
+    if not exhausted:
+        return items, f"the {max_pages}-page limit was reached and GitHub gave no total, so completeness is unknown"
+    return items, None
+
+
 def coverage_of(snap):
-    """How much was collected, computed from the snapshot's CONTENT (works for snapshots written by older versions):
-    (number of search results groups present, number of per-repo checks done)."""
-    return (int(bool(snap.get("issues"))) + int(bool(snap.get("prs"))),
+    """How much was collected, computed from the snapshot (works for snapshots written by older versions):
+    (number of open-item searches that were read COMPLETELY, number of per-repo checks done)."""
+    return (int(was_collected(snap, "issues")) + int(was_collected(snap, "prs")),
             len(snap.get("actions", {})) + len(snap.get("commits", {})) + len(snap.get("dependabot", {})))
 
 
@@ -320,7 +350,7 @@ def collect(cfg, gh, owner, prev):
     # 2. open issues / PRs via search (2+ calls instead of N calls)
     for kind, bucket in (("issue", "issues"), ("pr", "prs")):
         try:
-            items = gh.paged("/search/issues", {"q": f"user:{owner} is:open is:{kind}", "per_page": 100, "sort": "updated", "order": "desc"}, max_pages=5, key="items")
+            items, why = search_all(gh, {"q": f"user:{owner} is:open is:{kind}", "per_page": 100, "sort": "updated", "order": "desc"})
         except (RateLimited, BudgetExhausted) as e:
             snap["coverage_detail"]["searches"][bucket] = stop_reason(e)
             mark_partial(f"open {kind}s not collected (API rate limit / call budget)")
@@ -330,8 +360,13 @@ def collect(cfg, gh, owner, prev):
             snap["coverage_detail"]["searches"][bucket] = "api_error"
             mark_partial(f"open {kind}s not collected (search API error)")
             continue
-        snap["collected"][bucket] = True
-        snap["coverage_detail"]["searches"][bucket] = "ok"
+        if why:                             # items below are a lower bound: not "collected", never compared, shown as "≥N"
+            snap["coverage_detail"]["searches"][bucket] = "incomplete"
+            snap["coverage_detail"].setdefault("search_why", {})[bucket] = why
+            mark_partial(f"open {kind}s incomplete: {why}")
+        else:
+            snap["collected"][bucket] = True
+            snap["coverage_detail"]["searches"][bucket] = "ok"
         for it in items:
             repo = (it.get("repository_url") or "").rsplit("/", 1)[-1]
             snap[bucket][f"{repo}#{it['number']}"] = {"repo": repo, "number": it["number"], "title": it.get("title"), "created_at": it.get("created_at"),
@@ -433,11 +468,21 @@ def derive_alerts(cfg, snap, now):
 
 def was_collected(snap, bucket):
     """Were the open issues / PRs ('issues' / 'prs') actually collected for this snapshot?
-    Snapshots written before TASK-122 have no flag: infer it from their notes (same wording as today)."""
+    False also when the search was read only partly (see search_all). Snapshots written before TASK-122 have no flag: infer it from
+    their notes, and treat a full set of pages (>= OPEN_SEARCH_PAGES * 100 items) as possibly cut off, because older versions did not record that."""
     flags = snap.get("collected")
     if isinstance(flags, dict) and bucket in flags:
         return bool(flags[bucket])
+    if len(snap.get(bucket) or {}) >= OPEN_SEARCH_PAGES * 100:
+        return False
     return not any(f"open {bucket} not collected" in n for n in snap.get("notes", []))
+
+
+def search_state(snap, bucket):
+    """'ok' | 'incomplete' (some items were read, not all: a lower bound) | 'missing' (nothing usable)."""
+    if was_collected(snap, bucket):
+        return "ok"
+    return "incomplete" if ((snap.get("coverage_detail") or {}).get("searches") or {}).get(bucket) == "incomplete" else "missing"
 
 
 def diff(prev, snap):
@@ -457,8 +502,15 @@ def diff(prev, snap):
         else:
             d[new_k] = d[closed_k] = None
             d["not_compared"].append(bucket)
-    old ={f["id"] for a in prev.get("actions", {}).values() for f in a.get("failures", [])}
-    d["new_failures"] = sorted(f"{n}: {f['name']} #{f['id']}" for n, a in snap["actions"].items() for f in a["failures"] if f["id"] not in old)
+    # Actions: a failure is only "new" if the repository was READ in the previous snapshot. A repository that was eligible for the check
+    # but not read (call budget / rate limit / API error) in either snapshot cannot be compared: it is listed, never reported as new
+    # (its old failures would look new) and never as an all-clear (a new failure there would be missed).
+    def eligible(x):
+        return set(x.get("active_repos") or x.get("actions", {}))        # older snapshots without the list: only what was read
+    unread = (eligible(prev) - set(prev.get("actions", {}))) | (eligible(snap) - set(snap.get("actions", {})))
+    d["failures_not_compared"] = sorted(unread)
+    old = {f["id"] for n, a in prev.get("actions", {}).items() if n not in unread for f in a.get("failures", [])}
+    d["new_failures"] = sorted(f"{n}: {f['name']} #{f['id']}" for n, a in snap["actions"].items() if n not in unread for f in a["failures"] if f["id"] not in old)
     return d
 
 
@@ -485,6 +537,8 @@ def coverage_lines(cfg, snap):
     for bucket, label in (("issues", "Open issues"), ("prs", "Open PRs")):
         if was_collected(snap, bucket):
             L.append(f"| {label} (search) | collected | - |")
+        elif search_state(snap, bucket) == "incomplete":
+            L.append(f"| {label} (search) | **incomplete**: {len(snap.get(bucket) or {})} read | {md((cov.get('search_why') or {}).get(bucket, 'not all matching items were read'), 220)} |")
         else:
             L.append(f"| {label} (search) | **not collected** | {reasons.get((cov.get('searches') or {}).get(bucket), 'unknown')} |")
     total = cov.get("active_total", len(snap.get("active_repos", [])))
@@ -579,6 +633,10 @@ def build_report(cfg, snap, alerts, d, state, now):
     stale_items = [a for a in alerts if a["key"].startswith("stale:") and a["repo"] in own]
     got_issues, got_prs = was_collected(snap, "issues"), was_collected(snap, "prs")
     n_a = "not collected"
+
+    def open_cell(bucket, n):       # a lower bound is shown as one, a missing search as "not collected"
+        st = search_state(snap, bucket)
+        return str(n) if st == "ok" else (f"≥{n} (incomplete)" if st == "incomplete" else n_a)
     active_set = set(snap.get("active_repos", []))     # repositories eligible for per-repository checks (archived / forks / over the cap are not)
     L = [f"# GitHub daily report — {owner} — {today:%Y-%m-%d} (JST)", "",
          f"_Generated {today:%Y-%m-%d %H:%M} JST · read-only · {snap['api_calls']} API calls · "
@@ -590,7 +648,7 @@ def build_report(cfg, snap, alerts, d, state, now):
           f"| Repositories (own / forks) | {len(own)} / {forks} |",
           f"| Archived (own) | {sum(1 for r in own.values() if r['archived'])} |",
           f"| Private (own) | {sum(1 for r in own.values() if r['private'])} |",
-          f"| Open issues (own repos) | {len(issues_own) if got_issues else n_a} |", f"| Open PRs (own repos) | {len(prs_own) if got_prs else n_a} |",
+          f"| Open issues (own repos) | {open_cell('issues', len(issues_own))} |", f"| Open PRs (own repos) | {open_cell('prs', len(prs_own))} |",
           f"| Critical alerts | {len(crit)} |",
           f"| Stale issues/PRs (≥{cfg.stale_issue_days}d) | {len(stale_items) if (got_issues and got_prs) else str(len(stale_items)) + ' (incomplete: open issues/PRs not fully collected)'} |", ""]
     if crit:
@@ -609,15 +667,22 @@ def build_report(cfg, snap, alerts, d, state, now):
 
     L += ["", f"## 2. New / updated issues / 新規・更新Issue（直近2日）", ""]
     upd = sorted((v for v in issues_own.values() if (age_days(v["updated_at"], now) or 1e9) <= 2), key=lambda v: v["updated_at"], reverse=True)
-    L += [f"- {'🆕 ' if (age_days(v['created_at'], now) or 1e9) <= 2 else ''}[{md(v['repo'])}#{v['number']}]({v['url']}) {md(v['title'])} _(updated {jst(v['updated_at'])})_" for v in upd] or (["_None._"] if got_issues else ["_Not collected in this run (see Coverage)._"])
+    L += [f"- {'🆕 ' if (age_days(v['created_at'], now) or 1e9) <= 2 else ''}[{md(v['repo'])}#{v['number']}]({v['url']}) {md(v['title'])} _(updated {jst(v['updated_at'])})_" for v in upd] or (["_None._"] if got_issues else (["_None among the items read; the search was incomplete (see Coverage)._"] if search_state(snap, "issues") == "incomplete" else ["_Not collected in this run (see Coverage)._"]))
+    if search_state(snap, "issues") == "incomplete" and upd:
+        L.append("- _Incomplete: more open issues exist than were read (see Coverage)._")
 
     L += ["", "## 3. Open pull requests / 未対応PR", ""]
-    if not got_prs:
+    if search_state(snap, "prs") == "missing":
         L.append("_Not collected in this run (see Coverage)._")
     elif prs_own:
         L += ["| PR | Title | Age (days) | Draft |", "|---|---|---|---|"]
         for v in sorted(prs_own.values(), key=lambda v: v["created_at"]):
             L.append(f"| [{md(v['repo'])}#{v['number']}]({v['url']}) | {md(v['title'])} | {int(age_days(v['created_at'], now) or 0)} | {'yes' if v['draft'] else ''} |")
+        if not got_prs:
+            L.append("")
+            L.append("_Incomplete: more open PRs exist than were read (see Coverage)._")
+    elif not got_prs:
+        L.append("_None among the items read; the search was incomplete (see Coverage)._")
     else:
         L.append("_None._")
 
@@ -660,9 +725,11 @@ def build_report(cfg, snap, alerts, d, state, now):
                            ("Newly seen open PRs", "new_prs"), ("PRs no longer open (closed OR merged; not distinguished)", "closed_prs"),
                            ("New Actions failures", "new_failures")):
             if d[key] is None:
-                L.append(f"- {label}: **not compared** (open {bucket_of[key]} were not collected in this or the previous snapshot)")
+                L.append(f"- {label}: **not compared** (open {bucket_of[key]} were not collected, or only partly read, in this or the previous snapshot)")
                 continue
-            L.append(f"- {label}: " + (", ".join(md(x) for x in d[key][:20]) + (f" … +{len(d[key]) - 20}" if len(d[key]) > 20 else "") if d[key] else "none"))
+            skipped = d.get("failures_not_compared") if key == "new_failures" else None
+            L.append(f"- {label}: " + (", ".join(md(x) for x in d[key][:20]) + (f" … +{len(d[key]) - 20}" if len(d[key]) > 20 else "") if d[key] else "none")
+                     + (f" — Actions not compared for {len(skipped)} repositories (not read in this or the previous snapshot): {", ".join(md(x) for x in skipped[:8])}{" …" if len(skipped) > 8 else ""}" if skipped else ""))
         L.append("- _Only currently open issues/PRs are collected: an item opened and closed between two snapshots is never seen, and " + (
             "this section is not a daily count (section 8 gives previous-JST-day counts; push events and commits are not collected)._" if snap.get("activity")
             else "this report does not give daily push or merge counts._"))
