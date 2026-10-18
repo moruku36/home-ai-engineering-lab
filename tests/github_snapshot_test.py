@@ -190,10 +190,11 @@ def main():
         gs.run("moruku36", cfg)
         rep2 = read(os.path.join(cfg.report_dir, "github-daily-2026-10-16.md"))
         d = rep2.split("## 7.")[1]
-        check("diff: new issue", "New issues: alpha#3" in d, d)
-        check("diff: closed PR", "Closed/merged PRs: beta#5" in d)
+        # labels were made precise in TASK-122 (what the data can and cannot say); the facts they carry are unchanged
+        check("diff: new issue", "Newly seen open issues: alpha#3" in d, d)
+        check("diff: PR no longer open (closed OR merged is not distinguished)", "PRs no longer open (closed OR merged; not distinguished): beta#5" in d)
         check("diff: new Actions failure (run 901)", "New Actions failures" in d and "901" in d)
-        check("diff: repo with new push", "Repositories with new pushes: alpha" in d)
+        check("diff: repo whose last-push time changed (names, not a push count)", "(repository names only; NOT a count of pushes or commits): alpha" in d)
         check("snapshots kept per day + latest", {"2026-10-15.json", "2026-10-16.json", "latest.json"} <= set(os.listdir(os.path.join(cfg.state_dir, "snapshots"))))
 
         # ---- 3. authenticated run
@@ -316,6 +317,126 @@ def main():
         cfg.max_calls = 6
         r = gs.run("moruku36", cfg)
         check("legacy snapshot without coverage field is still protected", r.get("kept_previous") is True and before == read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md")), r)
+
+        # ---- 13. TASK-122: a failed search must read "not collected", never "0" / "None"
+        W.reset()
+        W.inject["/search/issues"] = [(403, {"X-RateLimit-Remaining": "0"})] * 2
+        cfg = mkcfg(gh_url, km_url)
+        r = gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        why = "GitHub API rate limit reached or nearly used up"
+        check("failed search: summary says 'not collected', not 0", "| Open issues (own repos) | not collected |" in rep and "| Open PRs (own repos) | not collected |" in rep)
+        check("failed search: coverage table names the reason", f"| Open issues (search) | **not collected** | {why} |" in rep and f"| Open PRs (search) | **not collected** | {why} |" in rep)
+        check("failed search: sections 2 and 3 say not collected, not 'None'", rep.count("_Not collected in this run (see Coverage)._") == 2)
+        check("failed search: stale figures are flagged as incomplete", rep.count("incomplete: open issues/PRs not fully collected") == 2)
+        check("failed search: machine-readable flags and reasons are returned", r["collected"] == {"issues": False, "prs": False} and r["coverage_detail"]["searches"] == {"issues": "rate_limit", "prs": "rate_limit"}, r["coverage_detail"])
+        check("failed search: counts keep their numeric type (n8n Summary node concatenates them)", r["counts"]["issues"] == 0 and r["counts"]["prs"] == 0 and r["partial"] is True)
+
+        # ---- 14. TASK-122: a failed search must never make every open item look closed (or, the next day, new)
+        W.reset()
+        cfg = mkcfg(gh_url, km_url)
+        gs.run("moruku36", cfg)                                        # day 1: complete
+        W.inject["/search/issues"] = [(403, {"X-RateLimit-Remaining": "0"})] * 2
+        cfg.now = lambda: NOW + dt.timedelta(days=1)
+        gs.run("moruku36", cfg)                                        # day 2: both searches fail
+        W.inject.clear()
+        d2 = read(os.path.join(cfg.report_dir, "github-daily-2026-10-16.md")).split("## 7.")[1]
+        check("search failed today: issues/PRs are 'not compared' and nothing is listed as closed", d2.count("**not compared**") == 4 and "alpha#1" not in d2 and "beta#5" not in d2, d2)
+        cfg.now = lambda: NOW + dt.timedelta(days=2)
+        gs.run("moruku36", cfg)                                        # day 3: searches work again, but the previous snapshot has no open items
+        d3 = read(os.path.join(cfg.report_dir, "github-daily-2026-10-17.md")).split("## 7.")[1]
+        check("previous search had failed: nothing is shown as 'new' either", d3.count("**not compared**") == 4 and "alpha#1" not in d3, d3)
+        W.issues["alpha#9"] = ("issue", "alpha", 9, "Fresh issue", 0, 0)
+        cfg.now = lambda: NOW + dt.timedelta(days=3)
+        gs.run("moruku36", cfg)                                        # day 4: both snapshots complete again
+        d4 = read(os.path.join(cfg.report_dir, "github-daily-2026-10-18.md")).split("## 7.")[1]
+        check("both snapshots complete again: comparison resumes", "Newly seen open issues: alpha#9" in d4 and "**not compared**" not in d4, d4)
+
+        # ---- 15. TASK-122: snapshots written before this change have no 'collected' flag
+        def latest_path(c):
+            return os.path.join(c.state_dir, "snapshots", "latest.json")
+
+        W.reset()
+        cfg = mkcfg(gh_url, km_url)
+        gs.run("moruku36", cfg)
+        legacy = json.load(open(latest_path(cfg), encoding="utf-8"))
+        legacy.pop("collected", None)
+        legacy.pop("coverage_detail", None)
+        json.dump(legacy, open(latest_path(cfg), "w", encoding="utf-8"))   # complete legacy snapshot: no flags, no note about searches
+        del W.issues["beta#5"]
+        cfg.now = lambda: NOW + dt.timedelta(days=1)
+        gs.run("moruku36", cfg)
+        d5 = read(os.path.join(cfg.report_dir, "github-daily-2026-10-16.md")).split("## 7.")[1]
+        check("complete legacy snapshot is still compared", "PRs no longer open (closed OR merged; not distinguished): beta#5" in d5 and "**not compared**" not in d5, d5)
+        W.reset()
+        cfg = mkcfg(gh_url, km_url)
+        gs.run("moruku36", cfg)
+        legacy = json.load(open(latest_path(cfg), encoding="utf-8"))
+        legacy.pop("collected", None)
+        legacy.pop("coverage_detail", None)
+        legacy.update(prs={}, partial=True, notes=["open prs not collected (API rate limit / call budget)"])   # how the previous version recorded a failed PR search
+        json.dump(legacy, open(latest_path(cfg), "w", encoding="utf-8"))
+        cfg.now = lambda: NOW + dt.timedelta(days=1)
+        gs.run("moruku36", cfg)
+        d6 = read(os.path.join(cfg.report_dir, "github-daily-2026-10-16.md")).split("## 7.")[1]
+        check("legacy snapshot whose PR search had failed: PRs not compared (beta#5 not shown as new)",
+              "Newly seen open PRs: **not compared**" in d6 and "PRs no longer open (closed OR merged; not distinguished): **not compared**" in d6 and "beta#5" not in d6, d6)
+        check("...while issues are still compared", "Newly seen open issues: none" in d6 and "Issues no longer open (closed; reason not available): none" in d6, d6)
+
+        # ---- 16. TASK-122: wording - what the diff can and cannot say
+        check("diff wording: misleading labels are gone", "Repositories with new pushes" not in rep2 and "Closed/merged PRs" not in rep2 and "Closed issues" not in rep2)
+        check("diff wording: scope note says snapshot-to-snapshot and no daily push/merge counts", "not a calendar day" in rep2 and "does not give daily push or merge counts" in rep2)
+
+        # ---- 17. TASK-122: coverage table (N/M and reasons) for a budget-limited unauthenticated run
+        W.reset()
+        cfg = mkcfg(gh_url, km_url, max_calls=5)
+        r = gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        why = "per-run API call budget reached (MAX_API_CALLS=5)"
+        check("coverage: Actions N/M with its reason", f"| GitHub Actions | 1/2 repositories checked | {why} |" in rep, [l for l in rep.splitlines() if "GitHub Actions |" in l])
+        check("coverage: last commit 0/2 with its reason", f"| last commit | 0/2 repositories checked | {why} |" in rep, [l for l in rep.splitlines() if "last commit |" in l])
+        check("coverage: unauthenticated -> Dependabot not collected, reason 'no token'", "| Dependabot alerts | **not collected** | no read-only token configured |" in rep)
+        check("coverage: API calls vs allowed", f"| API calls | {r['counts']['api_calls']} of 5 allowed | - |" in rep)
+        check("coverage: unchecked repositories are not presented as checked (section 4)", "among 1 of 2 active repositories checked (the others were not checked" in rep)
+        check("coverage: last commit of an unchecked repository reads 'not collected' (not '-')", "| not collected | 2 |" in rep)
+        check("coverage: stop reasons are machine-readable", r["coverage_detail"]["passes"]["GitHub Actions"] == {"done": 1, "total": 2, "failed": 0, "stopped": "call_budget"}, r["coverage_detail"])
+        W.reset()
+        cfg = mkcfg(gh_url, km_url, max_active=1)
+        gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        check("coverage: MAX_ACTIVE_REPOS cap is disclosed",
+              "| 2 found, 1 eligible for per-repository checks | only the 1 most recently pushed are checked (MAX_ACTIVE_REPOS=1) |" in rep, [l for l in rep.splitlines() if "Active repositories" in l])
+
+        # ---- 18. TASK-122: a complete run reports full coverage (and does not cry wolf)
+        W.reset()
+        cfg = mkcfg(gh_url, km_url)
+        r = gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        check("complete unauthenticated run: full coverage rows",
+              all(s in rep for s in ["| Repository list | 135 repositories (public only) | - |", "| Open issues (search) | collected | - |", "| Open PRs (search) | collected | - |",
+                                     "| GitHub Actions | 2/2 repositories checked | - |", "| last commit | 2/2 repositories checked | - |"]), [l for l in rep.splitlines() if l.startswith("| ") and "|" in l][:25])
+        check("complete run: nothing reads 'not collected' except the token-only checks", rep.count("not collected") == 2 and "**not compared**" not in rep and "Not collected in this run" not in rep, rep.count("not collected"))
+        check("repository outside the active set (archived delta) says 'not checked', not 'not collected'", "| delta | public | 2026-10-10 09:00 | not checked (outside active set) | 0 |" in rep)
+        W.reset()
+        cfg = mkcfg(gh_url, km_url, token=TOKEN)
+        r = gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        check("complete authenticated run: Dependabot coverage and private repositories",
+              "| Repository list | 136 repositories (public + private) | - |" in rep and "| Dependabot alerts | 3/3 repositories checked | - |" in rep, [l for l in rep.splitlines() if "Dependabot alerts |" in l])
+
+        # ---- 19. TASK-122: result stays compatible with the n8n Summary node; nothing secret is added
+        check("result keeps every key the n8n Summary node reads", all(k in r["counts"] for k in ("repos", "issues", "prs", "critical", "warn", "api_calls")) and "partial" in r and "report" in r)
+        allfiles = "".join(read(os.path.join(dp, f)) for dp, _, fs in os.walk(os.path.dirname(cfg.report_dir)) for f in fs)
+        check("tokens never appear in the result, snapshots or reports (coverage fields included)", TOKEN not in json.dumps(r) and TOKEN not in allfiles and KUMA not in json.dumps(r) and KUMA not in allfiles)
+
+        # ---- 20. TASK-122: a same-day poorer re-run exposes the KEPT snapshot's collection flags (not its own)
+        W.reset()
+        cfg = mkcfg(gh_url, km_url)
+        gs.run("moruku36", cfg)
+        cfg.max_calls = 6
+        r = gs.run("moruku36", cfg)
+        check("kept report: result carries the kept snapshot's flags",
+              r.get("kept_previous") is True and r["collected"] == {"issues": True, "prs": True} and r["coverage_detail"]["searches"] == {"issues": "ok", "prs": "ok"}, r)
     finally:
         gh.shutdown()
         km.shutdown()
