@@ -429,6 +429,108 @@ def main():
         allfiles = "".join(read(os.path.join(dp, f)) for dp, _, fs in os.walk(os.path.dirname(cfg.report_dir)) for f in fs)
         check("tokens never appear in the result, snapshots or reports (coverage fields included)", TOKEN not in json.dumps(r) and TOKEN not in allfiles and KUMA not in json.dumps(r) and KUMA not in allfiles)
 
+        # ---- 19b. TASK-122: an INCOMPLETE open-item search (more than 5 pages / incomplete_results) must not look complete
+        class BigSearch(GitHubHandler):
+            """/search/issues for open ISSUES with a configurable size; everything else is the normal fake."""
+            n, offset, total, incomplete = 0, 0, "auto", False
+
+            def do_GET(self):
+                u_ = urllib.parse.urlparse(self.path)
+                q_ = urllib.parse.parse_qs(u_.query)
+                if u_.path == "/search/issues" and "is:issue" in q_["q"][0] and "is:open" in q_["q"][0]:
+                    W.requests.append((u_.path, False, None))
+                    page, per = int(q_.get("page", ["1"])[0]), int(q_.get("per_page", ["30"])[0])
+                    allv = [{"repository_url": "https://api.github.com/repos/moruku36/alpha", "number": BigSearch.offset + i, "title": f"issue {i}", "created_at": iso(3), "updated_at": iso(3),
+                             "html_url": f"https://github.com/moruku36/alpha/issues/{BigSearch.offset + i}", "user": {"login": "u"}} for i in range(BigSearch.n)]
+                    body = {"items": allv[(page - 1) * per: page * per], "incomplete_results": BigSearch.incomplete}
+                    if BigSearch.total == "auto":
+                        body["total_count"] = len(allv)
+                    elif BigSearch.total is not None:
+                        body["total_count"] = BigSearch.total
+                    return self._send(200, body)
+                return super().do_GET()
+
+        bs, bs_url = serve(BigSearch)
+
+        def big(n, offset=0, total="auto", incomplete=False):
+            W.reset()
+            BigSearch.n, BigSearch.offset, BigSearch.total, BigSearch.incomplete = n, offset, total, incomplete
+
+        def day(cfg_, extra_days=0):
+            cfg_.now = lambda: NOW + dt.timedelta(days=extra_days)
+            return gs.run("moruku36", cfg_), read(os.path.join(cfg_.report_dir, f"github-daily-{(NOW + dt.timedelta(days=extra_days)).strftime('%Y-%m-%d')}.md"))
+
+        try:
+            # a) 600 matches but only 5 pages (500) are read: the old code called this "collected"
+            big(600)
+            cfg = mkcfg(bs_url, km_url)
+            r, rep = day(cfg)
+            check("incomplete search (600 matches, 500 read): not flagged as collected, reason recorded",
+                  r["collected"]["issues"] is False and r["coverage_detail"]["searches"]["issues"] == "incomplete" and r["partial"] is True, (r["collected"], r["coverage_detail"]))
+            check("incomplete search: Summary shows a lower bound, never a bare number", "| Open issues (own repos) | ≥500 (incomplete) |" in rep, rep.split("## 1.")[0][-700:])
+            check("incomplete search: Coverage says incomplete and why", "| Open issues (search) | **incomplete**: 500 read |" in rep and "only 500 of 600" in rep, rep.split("### Coverage")[1][:700])
+            check("incomplete search: counts stay numeric for the n8n Summary node", r["counts"]["issues"] == 500 and isinstance(r["counts"]["warn"], int))
+            check("incomplete search: Data completeness banner + stale row flagged", "open issues incomplete" in rep and "(incomplete: open issues/PRs not fully collected)" in rep)
+            # b) the bug itself: day 1 complete (480), day 2 incomplete and shifted (numbers 100..599): items 0..99 are NOT 'no longer open'
+            big(480)
+            cfg = mkcfg(bs_url, km_url)
+            r1, rep1 = day(cfg)
+            check("complete search below the page limit is still 'collected'", r1["collected"]["issues"] is True and r1["coverage_detail"]["searches"]["issues"] == "ok")
+            BigSearch.n, BigSearch.offset = 600, 100
+            r2, rep2 = day(cfg, 1)
+            d2 = rep2.split("## 7.")[1]
+            check("incomplete search today: issues are 'not compared', nothing is called closed or new",
+                  "**not compared**" in d2 and "alpha#0" not in d2 and "alpha#599" not in d2 and "Issues no longer open" in d2, d2)
+            # c) incomplete_results=true (GitHub timed out) with fewer items than one page
+            big(50, incomplete=True)
+            cfg = mkcfg(bs_url, km_url)
+            r, rep = day(cfg)
+            check("incomplete_results=true -> incomplete even though total_count matches", r["coverage_detail"]["searches"]["issues"] == "incomplete" and "incomplete_results" in rep and "≥50 (incomplete)" in rep)
+            # c2) monitoring compatibility: an incomplete search is an ordinary "partial" run (Kuma stays up, message says PARTIAL), not a failure
+            big(600)
+            W.runs["beta"] = [W.run(900, "success", 1)]                   # no critical alert in this world
+            KumaHandler.pushes.clear()
+            r, rep = day(mkcfg(bs_url, km_url))
+            check("incomplete search without critical alerts: Kuma push is 'up' with PARTIAL, result has partial=true",
+                  r["partial"] is True and r["counts"]["critical"] == 0 and KumaHandler.pushes[-1][1] == "up" and "PARTIAL" in KumaHandler.pushes[-1][2], KumaHandler.pushes[-1:])
+            # d) exactly at the page limit: total_count known and equal -> complete; total_count missing -> unknown -> treated as incomplete
+            big(500)
+            r, rep = day(mkcfg(bs_url, km_url))
+            check("exactly 500 matches with total_count=500 -> complete", r["collected"]["issues"] is True)
+            big(500, total=None)
+            r, rep = day(mkcfg(bs_url, km_url))
+            check("5 full pages and no total_count -> completeness unknown -> incomplete (safe side)", r["collected"]["issues"] is False and "completeness is unknown" in rep, rep.split("### Coverage")[1][:600])
+            big(30, total=None)
+            r, rep = day(mkcfg(bs_url, km_url))
+            check("short last page and no total_count -> complete", r["collected"]["issues"] is True)
+            big(500, total=1500)
+            r, rep = day(mkcfg(bs_url, km_url))
+            check("more than 1000 matches -> incomplete, whatever the page limit", r["collected"]["issues"] is False and "only 500 of 1500" in rep)
+            # e) same-day re-run: an incomplete run must not replace a complete report of the same day; a complete run replaces an incomplete one
+            big(40)
+            cfg = mkcfg(bs_url, km_url)
+            r, rep_full = day(cfg)
+            BigSearch.n, BigSearch.total = 600, "auto"
+            r_inc = gs.run("moruku36", cfg)
+            rep_after = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+            check("same day: incomplete re-run keeps the complete report", r_inc.get("kept_previous") is True and rep_after == rep_full)
+            big(600)
+            cfg = mkcfg(bs_url, km_url)
+            day(cfg)
+            BigSearch.n = 40
+            r_ok = gs.run("moruku36", cfg)
+            rep_ok = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+            check("same day: complete re-run replaces the incomplete report", not r_ok.get("kept_previous") and r_ok["collected"]["issues"] is True and "**incomplete**" not in rep_ok)
+            # f) snapshots written by older versions (no flags) cannot show truncation: 500+ items are treated as possibly cut off
+            full_legacy = {"issues": {f"alpha#{i}": {} for i in range(500)}, "notes": []}
+            check("legacy snapshot with 500 open items (= the old page limit): not trusted as complete", gs.was_collected(full_legacy, "issues") is False)
+            check("legacy snapshot with 499 open items: still trusted (behaviour unchanged)", gs.was_collected({"issues": {f"alpha#{i}": {} for i in range(499)}, "notes": []}, "issues") is True)
+            check("coverage_of counts a complete search with zero open items, not an incomplete one",
+                  gs.coverage_of({"issues": {}, "prs": {}, "collected": {"issues": True, "prs": True}})[0] == 2
+                  and gs.coverage_of({"issues": {"a#1": {}}, "prs": {}, "collected": {"issues": False, "prs": True}})[0] == 1)
+        finally:
+            bs.shutdown()
+
         # ---- 20. TASK-122: a same-day poorer re-run exposes the KEPT snapshot's collection flags (not its own)
         W.reset()
         cfg = mkcfg(gh_url, km_url)

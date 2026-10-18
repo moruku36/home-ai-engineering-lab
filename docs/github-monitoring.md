@@ -182,13 +182,14 @@ Source: `stacks/n8n/python-jobs/github_snapshot.py` (`collect`, `derive_alerts`,
 | Field | Meaning | Not a sign of |
 |---|---|---|
 | `authenticated` | `true` only if `GITHUB_TOKEN` is set | – (`false` is the documented token-less mode) |
-| `partial` | `true` if open issues/PRs could not be searched, or a per-repository pass (Actions / last commit / Dependabot) stopped early or failed for some repositories | a missing token by itself (that only adds a note) |
+| `partial` | `true` if open issues/PRs could not be searched **or were read only partly** (see below), or a per-repository pass (Actions / last commit / Dependabot) stopped early or failed for some repositories | a missing token by itself (that only adds a note) |
 | `counts.warn` | number of non-critical alerts = stale issues/PRs (not updated for ≥ `STALE_DAYS`, default 30) **plus one** `collector:partial` alert whenever `partial` is `true` | a failure |
-| `collected` | `{issues, prs}`: were open issues / PRs actually collected | – |
-| `coverage_detail` | per search and per pass: `ok`, or the stop reason (`rate_limit`, `call_budget`, `api_error`, `no_token`), N/M checked, active-repository total | – |
+| `collected` | `{issues, prs}`: were open issues / PRs read **completely** (`false` also when only some were read) | – |
+| `coverage_detail` | per search and per pass: `ok`, `incomplete` (some items read, with the reason in `search_why`), or the stop reason (`rate_limit`, `call_budget`, `api_error`, `no_token`), N/M checked, active-repository total | – |
 
 - **EN:** With `partial: true`, one of the `warn` alerts is the partial notice itself; the remaining ones are stale issues/PRs (this counts items in forks too, while the report's "Stale" row counts only own repositories). Which items are stale is only visible in the report body.
 - **EN:** `call_budget` = our own `MAX_API_CALLS` (45 without a token). `rate_limit` = GitHub reported the limit as reached, or fewer than 3 calls remaining. `coverage_detail` and `collected` are in the job's JSON response, so the n8n execution output shows *why* a run was partial without opening the report.
+- **EN (incomplete searches):** the open-item search reads at most 5 pages of 100 (500 items), and GitHub search itself returns at most 1,000 results and can set `incomplete_results` after a timeout. The collector compares what it read with `total_count`; if it cannot show that everything was read (more matches than items read, `incomplete_results`, or 5 full pages with no `total_count`), the bucket is `incomplete`: the report shows `≥N (incomplete)` and the Coverage reason, the bucket is **not compared** in the diff (nothing is called closed or new), `partial` is set (a normal partial run for Kuma), and a same-day re-run that is less complete never replaces a more complete report. Snapshots written before this change cannot show truncation, so one with ≥ 500 open items is not trusted for comparison.
 - **JA:** `partial: true` のとき `warn` の1件は「partial の通知」そのもので、残りが stale な issue/PR です（フォーク上の項目も数えますが、レポートの「Stale」行は自分のリポジトリのみ）。どの項目かはレポート本文でのみ分かります。`call_budget` は自前の `MAX_API_CALLS`（トークンなしで45）、`rate_limit` はGitHubの上限到達または残り3未満です。`coverage_detail` と `collected` はジョブのJSON応答に含まれるため、n8nの実行出力で、レポートを開かずに partial の理由を確認できます。
 
 ## 13. Proposal: true daily push / merge counts — NOT implemented
