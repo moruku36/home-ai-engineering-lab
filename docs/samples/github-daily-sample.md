@@ -2,7 +2,7 @@
 
 # GitHub daily report — moruku36 — 2026-10-15 (JST)
 
-_Generated 2026-10-15 09:00 JST · read-only · 12 API calls · authenticated (read-only token)_
+_Generated 2026-10-15 09:00 JST · read-only · 17 API calls · authenticated (read-only token)_
 
 ## Summary / 概要
 
@@ -32,7 +32,8 @@ _Generated 2026-10-15 09:00 JST · read-only · 12 API calls · authenticated (r
 | GitHub Actions | 3/3 repositories checked | - |
 | last commit | 3/3 repositories checked | - |
 | Dependabot alerts | 3/3 repositories checked | - |
-| API calls | 12 of 1500 allowed | - |
+| Previous-day activity (section 8) | 5/5 metrics read in full (as of collection time; NOT a final value for the day (search-index delay is unverified)) | - |
+| API calls | 17 of 1500 allowed | - |
 | GitHub rate limit remaining (as reported by GitHub) | 4988 | - |
 
 ## 1. Recently updated repositories / 最近更新（7日以内）
@@ -72,6 +73,28 @@ _Generated 2026-10-15 09:00 JST · read-only · 12 API calls · authenticated (r
 ## 7. Changes since the previous snapshot / 前回収集との差分
 
 _First snapshot — nothing to compare yet._
+
+## 8. Activity in the previous JST day / 前日（JST）の活動
+
+_Window: 2026-10-14 00:00 ≤ t < 2026-10-15 00:00 JST (half-open). Scope: own non-fork repositories, public + private (read-only token). Read from GitHub search at 2026-10-15 09:00 JST: all results of the searches were scanned (unless a row says '≥'), but this is what the search index returned at that moment. GitHub does not document how long indexing takes (not verified here), so items indexed later may be missing: a count is **not a final value for the day**. Counts are the current state of items; an item reopened later, deleted or moved is not counted._
+
+| Metric | Count | Basis |
+|---|---|---|
+| PRs opened | 2 | created_at in window |
+| PRs merged | 1 | closed in window AND merged_at in window (a closed PR without merged_at is not a merge) |
+| PRs closed without merge | 1 | closed_at in window, merged_at empty |
+| Issues opened | 1 | created_at in window |
+| Issues closed | 0 | closed_at in window (completed vs. not planned is not distinguished) |
+| Repositories whose LATEST push time is in the window | 1 | repository count, NOT a push count or commit count; a later push overwrites the time, so this is a lower bound |
+| Repositories pushed after the window (activity inside the window unknown) | 0 | not counted as active or inactive |
+| Push events | **not collected** | needs a source that can be counted exactly (design only: docs/github-monitoring.md §13) |
+| Commits | **not collected** | design only (docs/github-monitoring.md §13) |
+
+- PRs opened: example-app#7, example-app#8
+- PRs merged: example-app#7
+- PRs closed without merge: example-infra#6
+- Issues opened: example-app#9
+- Repositories whose latest push is in the window: example-app
 
 ---
 _Scope: owner `moruku36` only; forks are counted but not analysed. Nothing was written to GitHub._
