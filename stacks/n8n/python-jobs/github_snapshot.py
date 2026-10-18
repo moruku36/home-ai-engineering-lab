@@ -48,6 +48,9 @@ class Config:
         self.actions_alert_hours = _int("ACTIONS_ALERT_HOURS", 48)
         self.max_active = _int("MAX_ACTIVE_REPOS", 40)
         self.max_calls = _int("MAX_API_CALLS", 1500 if self.token else 45)
+        # API calls withheld from the per-repository checks so that section 8 can run (4 searches + 2 for extra pages / PR lookups)
+        self.activity_reserve = _int("ACTIVITY_RESERVE_CALLS", 6)
+        self.activity = os.environ.get("GITHUB_ACTIVITY", "1").strip() != "0"     # previous-JST-day activity section; "0" = off (report as before)
         self.http_timeout = _int("HTTP_TIMEOUT", 10)
         self.tries = _int("HTTP_TRIES", 3)
         self.retry_base = float(os.environ.get("RETRY_BASE_SECONDS", "2"))
@@ -84,6 +87,7 @@ def stop_reason(e):
 class GH:
     def __init__(self, cfg):
         self.cfg, self.calls, self.remaining = cfg, 0, None
+        self.reserve = 0        # calls withheld for later work (previous-day activity); 0 = the whole MAX_API_CALLS is usable
 
     def _note(self, headers):
         try:
@@ -101,7 +105,7 @@ class GH:
             headers["Authorization"] = "Bearer " + self.cfg.token   # only ever sent to cfg.api
         last = None
         for attempt in range(1, self.cfg.tries + 1):
-            if self.calls >= self.cfg.max_calls:
+            if self.calls >= self.cfg.max_calls - self.reserve:
                 raise BudgetExhausted("call_budget")        # our own per-run limit (MAX_API_CALLS)
             if self.remaining is not None and self.remaining < 3:
                 raise BudgetExhausted("rate_limit")         # GitHub's limit is (nearly) used up
@@ -171,6 +175,125 @@ def jst(ts):
     return t.astimezone(JST).strftime("%Y-%m-%d %H:%M") if t else "-"
 
 
+# ------------------------------------------------------------------ previous-JST-day activity (TASK-122, part 2)
+def activity_window(now):
+    """The previous JST calendar day as a half-open UTC interval [start, end): 00:00 JST of yesterday .. 00:00 JST of today."""
+    day = now.astimezone(JST).replace(hour=0, minute=0, second=0, microsecond=0)
+    return (day - dt.timedelta(days=1)).astimezone(dt.timezone.utc), day.astimezone(dt.timezone.utc)
+
+
+def _utc(t):
+    return t.strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def _in_window(ts, start, end):
+    t = parse_ts(ts)
+    return bool(t) and start <= t < end
+
+
+def search_window(gh, query):
+    """All pages of one issue/PR search (GitHub returns at most 1000 results per search, 100 per page).
+    Returns (items, why_incomplete): why_incomplete is None only when GitHub reported total_count <= 1000, incomplete_results=false
+    and every result was fetched; otherwise the items are a lower bound."""
+    items, total, incomplete = [], None, False
+    for page in range(1, 11):
+        try:
+            _, data = gh.get("/search/issues", {"q": query, "per_page": 100, "page": page})
+        except (RateLimited, BudgetExhausted, ApiError) as e:
+            if not items:
+                raise
+            reason = STOP_REASONS.get(stop_reason(e), "per-run API call budget reached") if not isinstance(e, ApiError) else "search API error"
+            return items, f"stopped after {len(items)} result(s): {reason}"      # a lower bound, not nothing
+        batch = data.get("items") or []
+        items.extend(batch)
+        total = data.get("total_count") if isinstance(data.get("total_count"), int) else total
+        incomplete = incomplete or bool(data.get("incomplete_results"))
+        if len(batch) < 100 or (total is not None and len(items) >= total):
+            break
+    if incomplete:
+        return items, "GitHub reported incomplete_results (search timed out)"
+    if total is None or total > 1000:
+        return items, "more than 1000 matches (GitHub search returns at most 1000)"
+    if len(items) < total:
+        return items, f"only {len(items)} of {total} matches were returned"
+    return items, None
+
+
+def collect_activity(cfg, gh, owner, snap, now):
+    """Counts for the previous JST day, from the Search API only (no new permission, no extra token). Each metric is stored as
+    {"status": "ok" | "incomplete" | "rate_limit" | "call_budget" | "api_error", "why": str, "keys": ["repo#number", ...]}.
+    A metric that could not be collected has NO count: it must never be shown as 0. Pushes and commits are NOT collected here."""
+    start, end = activity_window(now)
+    own = {n for n, r in snap["repos"].items() if not r["fork"]}
+    # the search qualifiers are inclusive and their boundary handling is not documented, so ask for a slightly wider range and
+    # apply the exact half-open filter [start, end) to each item's timestamp below.
+    rng = f"{(start - dt.timedelta(seconds=1)).strftime('%Y-%m-%dT%H:%M:%S+00:00')}..{end.strftime('%Y-%m-%dT%H:%M:%S+00:00')}"
+    act = {"window": {"start": _utc(start), "end": _utc(end)}, "scope": "public + private (read-only token)" if cfg.token else "public repositories only",
+           "metrics": {}, "ignored_outside_own_nonfork": 0, "collected_at": now.isoformat()}
+    snap["activity"] = act
+
+    def fail(names, e):
+        for n in names:
+            act["metrics"][n] = {"status": e, "why": STOP_REASONS.get(e, "per-run API call budget reached" if e == "call_budget" else e), "keys": []}
+
+    def fetch(q, names):
+        try:
+            return search_window(gh, q)
+        except (RateLimited, BudgetExhausted) as e:
+            fail(names, stop_reason(e))
+        except ApiError as e:
+            log("warn", "activity search failed", error=str(e)[:120])
+            fail(names, "api_error")
+        return None
+
+    def mine(items, field):
+        """Own non-fork repositories only, timestamp inside the window, de-duplicated by repo#number."""
+        out = {}
+        for it in items:
+            repo = (it.get("repository_url") or "").rsplit("/", 1)[-1]
+            if repo not in own:
+                act["ignored_outside_own_nonfork"] += 1
+                continue
+            if _in_window(it.get(field), start, end):
+                out[f"{repo}#{it['number']}"] = it
+        return out
+
+    def record(name, keys, why):
+        act["metrics"][name] = {"status": "incomplete" if why else "ok", "why": why or "", "keys": sorted(keys)}
+
+    for name, q, field in (("prs_opened", f"user:{owner} is:pr created:{rng}", "created_at"),
+                           ("issues_opened", f"user:{owner} is:issue created:{rng}", "created_at"),
+                           ("issues_closed", f"user:{owner} is:issue is:closed closed:{rng}", "closed_at")):
+        res = fetch(q, [name])
+        if res:
+            record(name, mine(res[0], field), res[1])
+
+    # closed PRs: merged only when merged_at (not just "closed") is inside the window
+    res = fetch(f"user:{owner} is:pr is:closed closed:{rng}", ["prs_merged", "prs_closed_unmerged"])
+    if res:
+        merged, unmerged, unresolved, why = [], [], [], res[1] or ""
+        for key, it in mine(res[0], "closed_at").items():
+            pr = it.get("pull_request") or {}
+            if "merged_at" in pr:
+                m = pr["merged_at"]
+            else:   # search item without merged_at: ask the pull request itself (documented field), never guess
+                try:
+                    _, data = gh.get(f"/repos/{owner}/{key.rsplit('#', 1)[0]}/pulls/{it['number']}", allow=(404,))
+                    m = (data or {}).get("merged_at", "?") if data else "?"
+                except (RateLimited, BudgetExhausted, ApiError):
+                    m = "?"
+            if m is None:
+                unmerged.append(key)
+            elif m != "?" and _in_window(m, start, end):
+                merged.append(key)
+            else:
+                unresolved.append(key)
+        if unresolved:
+            why = (why + "; " if why else "") + f"merged/closed could not be determined for {len(unresolved)} PR(s): {', '.join(sorted(unresolved)[:5])}"
+        record("prs_merged", merged, why)
+        record("prs_closed_unmerged", unmerged, why)
+
+
 # ------------------------------------------------------------------ collection
 def collect(cfg, gh, owner, prev):
     now = cfg.now()
@@ -222,6 +345,10 @@ def collect(cfg, gh, owner, prev):
     active = active_all[:cfg.max_active]
     snap["coverage_detail"]["active_total"] = len(active_all)
 
+    if getattr(cfg, "activity", True):
+        gh.reserve = max(0, min(cfg.activity_reserve, cfg.max_calls - gh.calls))     # per-repository checks give way first; section 8 keeps its calls
+        snap["coverage_detail"]["activity_reserve"] = gh.reserve
+
     def run_pass(label, fn, repos_):
         done, failed, stopped = 0, [], None
         try:
@@ -271,7 +398,11 @@ def collect(cfg, gh, owner, prev):
     else:
         snap["notes"].append("Dependabot alerts and private repositories are not included (no read-only token configured)")
         snap["coverage_detail"]["passes"]["Dependabot alerts"] = {"done": 0, "total": len(active), "failed": 0, "stopped": "no_token"}
-    snap["api_calls"], snap["rate_remaining"], snap["active_repos"] = gh.calls, gh.remaining, active
+    remaining_before_activity = gh.remaining      # search has its own, much smaller bucket: keep the figure the report always showed
+    gh.reserve = 0                            # release the withheld calls: section 8 may use them (and whatever the checks left over)
+    if getattr(cfg, "activity", True):
+        collect_activity(cfg, gh, owner, snap, now)
+    snap["api_calls"], snap["rate_remaining"], snap["active_repos"] = gh.calls, remaining_before_activity, active
     # how much was actually collected: (search results present?, per-repo checks done) - used to avoid
     # replacing a fuller report from the same day with a poorer one (e.g. a manual re-run at the rate limit)
     return snap
@@ -335,10 +466,20 @@ def diff(prev, snap):
 STOP_REASONS = {"rate_limit": "GitHub API rate limit reached or nearly used up", "no_token": "no read-only token configured", "api_error": "search API error"}
 
 
+def activity_summary(snap):
+    """Machine-readable view of section 8 for the run() result: count is None unless measured (status 'incomplete' = lower bound)."""
+    ms = (snap or {}).get("activity", {}).get("metrics") if (snap or {}).get("activity") else None
+    if ms is None:
+        return None
+    return {k: {"status": m["status"], "count": len(m["keys"]) if m["status"] in ("ok", "incomplete") else None} for k, m in ms.items()}
+
+
 def coverage_lines(cfg, snap):
     """What was collected and, if not, why. Only measured values from snap['coverage'] / snap['collected'] are shown."""
     cov = snap.get("coverage_detail") or {}
-    reasons = dict(STOP_REASONS, call_budget=f"per-run API call budget reached (MAX_API_CALLS={cfg.max_calls})")
+    held = cov.get("activity_reserve") or 0
+    reasons = dict(STOP_REASONS, call_budget=f"per-run API call budget reached (MAX_API_CALLS={cfg.max_calls}"
+                   + (f"; {held} calls are held back for section 8, ACTIVITY_RESERVE_CALLS" if held else "") + ")")
     L = ["### Coverage / 取得範囲", "", "| Check | Collected | Not collected: reason |", "|---|---|---|",
          f"| Repository list | {len(snap['repos'])} repositories ({'public + private' if snap['authenticated'] else 'public only'}) | - |"]
     for bucket, label in (("issues", "Open issues"), ("prs", "Open PRs")):
@@ -363,11 +504,67 @@ def coverage_lines(cfg, snap):
         if p["failed"]:
             why.append(f"{p['failed']} repositories failed")
         L.append(f"| {label} | {p['done']}/{p['total']} repositories checked | " + ("; ".join(why) if why else "-") + " |")
+    ms = (snap.get("activity") or {}).get("metrics")
+    if ms is not None:
+        okc = sum(1 for m in ms.values() if m["status"] == "ok")
+        bad = sorted({m["why"] for m in ms.values() if m["status"] != "ok" and m.get("why")})
+        L.append(f"| Previous-day activity (section 8) | {okc}/{len(ms)} metrics read in full (as of collection time; NOT a final value for the day (search-index delay is unverified)) | " + (md("; ".join(bad), 200) if bad else "-") + " |")
     remaining = snap.get("rate_remaining")
     L.append(f"| API calls | {snap['api_calls']} of {cfg.max_calls} allowed | - |")
     if remaining is not None:
         L.append(f"| GitHub rate limit remaining (as reported by GitHub) | {remaining} | - |")
     L.append("")
+    return L
+
+
+def _names(keys, n=15):
+    return ", ".join(md(k) for k in keys[:n]) + (f" … +{len(keys) - n}" if len(keys) > n else "")
+
+
+def activity_lines(cfg, snap):
+    """Section 8. A metric is a number only when it was measured; otherwise 'not collected' + reason (never 0); a lower bound is '≥N'."""
+    act = snap.get("activity")
+    if not act:
+        return []
+    s, e = parse_ts(act["window"]["start"]), parse_ts(act["window"]["end"])
+    fmt = lambda t: t.astimezone(JST).strftime("%Y-%m-%d %H:%M")  # noqa: E731
+    L = ["", "## 8. Activity in the previous JST day / 前日（JST）の活動", "",
+         f"_Window: {fmt(s)} ≤ t < {fmt(e)} JST (half-open). Scope: own non-fork repositories, {act['scope']}. "
+         f"Read from GitHub search at {fmt(parse_ts(act['collected_at'])) if act.get('collected_at') else 'collection time'} JST: all results of the searches were scanned (unless a row says '≥'), "
+         "but this is what the search index returned at that moment. GitHub does not document how long indexing takes (not verified here), so items indexed later may be missing: "
+         "a count is **not a final value for the day**. Counts are the current state of items; an item reopened later, deleted or moved is not counted._", "",
+         "| Metric | Count | Basis |", "|---|---|---|"]
+    ms = act["metrics"]
+
+    def cell(name):
+        m = ms.get(name)
+        if not m or m["status"] not in ("ok", "incomplete"):
+            return "**not collected**" + (f" ({md(m['why'], 120)})" if m and m.get("why") else "")
+        return str(len(m["keys"])) if m["status"] == "ok" else f"≥{len(m['keys'])} (incomplete: {md(m['why'], 160)})"
+
+    rows = (("PRs opened", "prs_opened", "created_at in window"),
+            ("PRs merged", "prs_merged", "closed in window AND merged_at in window (a closed PR without merged_at is not a merge)"),
+            ("PRs closed without merge", "prs_closed_unmerged", "closed_at in window, merged_at empty"),
+            ("Issues opened", "issues_opened", "created_at in window"),
+            ("Issues closed", "issues_closed", "closed_at in window (completed vs. not planned is not distinguished)"))
+    for label, name, basis in rows:
+        L.append(f"| {label} | {cell(name)} | {basis} |")
+    own = {n: r for n, r in snap["repos"].items() if not r["fork"]}
+    inwin = sorted(n for n, r in own.items() if _in_window(r["pushed_at"], s, e))
+    later = sorted(n for n, r in own.items() if r["pushed_at"] and parse_ts(r["pushed_at"]) >= e)
+    L += [f"| Repositories whose LATEST push time is in the window | {len(inwin)} | repository count, NOT a push count or commit count; a later push overwrites the time, so this is a lower bound |",
+          f"| Repositories pushed after the window (activity inside the window unknown) | {len(later)} | not counted as active or inactive |",
+          "| Push events | **not collected** | needs a source that can be counted exactly (design only: docs/github-monitoring.md §13) |",
+          "| Commits | **not collected** | design only (docs/github-monitoring.md §13) |", ""]
+    for label, name in (("PRs opened", "prs_opened"), ("PRs merged", "prs_merged"), ("PRs closed without merge", "prs_closed_unmerged"),
+                        ("Issues opened", "issues_opened"), ("Issues closed", "issues_closed")):
+        m = ms.get(name)
+        if m and m["status"] in ("ok", "incomplete") and m["keys"]:
+            L.append(f"- {label}: {_names(m['keys'])}")
+    if inwin:
+        L.append(f"- Repositories whose latest push is in the window: {_names(inwin)}")
+    if act.get("ignored_outside_own_nonfork"):
+        L.append(f"- _{act['ignored_outside_own_nonfork']} search result(s) in forks / unknown repositories were ignored._")
     return L
 
 
@@ -466,7 +663,10 @@ def build_report(cfg, snap, alerts, d, state, now):
                 L.append(f"- {label}: **not compared** (open {bucket_of[key]} were not collected in this or the previous snapshot)")
                 continue
             L.append(f"- {label}: " + (", ".join(md(x) for x in d[key][:20]) + (f" … +{len(d[key]) - 20}" if len(d[key]) > 20 else "") if d[key] else "none"))
-        L.append("- _Only currently open issues/PRs are collected: an item opened and closed between two snapshots is never seen, and this report does not give daily push or merge counts._")
+        L.append("- _Only currently open issues/PRs are collected: an item opened and closed between two snapshots is never seen, and " + (
+            "this section is not a daily count (section 8 gives previous-JST-day counts; push events and commits are not collected)._" if snap.get("activity")
+            else "this report does not give daily push or merge counts._"))
+    L += activity_lines(cfg, snap)
     L += ["", "---", f"_Scope: owner `{owner}` only; forks are counted but not analysed. Nothing was written to GitHub._", ""]
     return "\n".join(L)
 
@@ -546,7 +746,7 @@ def run(owner, cfg=None):
                            "api_calls": gh.calls},
                 "critical_alerts": [a["text"] for a in same_day.get("alerts", []) if a["severity"] == "critical"][:10],
                 "notes": snap["notes"] + ["kept today's earlier, fuller report (this run was partial)"], "kuma_pushed": pushed,
-                    "collected": same_day.get("collected"), "coverage_detail": same_day.get("coverage_detail")}
+                    "collected": same_day.get("collected"), "coverage_detail": same_day.get("coverage_detail"), "activity": activity_summary(same_day)}
 
     # alert state: remember first_seen so reports can show how long something has been open
     sp = os.path.join(cfg.state_dir, "alerts_state.json")
@@ -577,4 +777,4 @@ def run(owner, cfg=None):
             "counts": {"repos": len(snap["repos"]), "issues": len(snap["issues"]), "prs": len(snap["prs"]), "critical": len(crit),
                        "warn": len(alerts) - len(crit), "api_calls": gh.calls},
             "critical_alerts": [a["text"] for a in crit][:10], "notes": snap["notes"], "kuma_pushed": pushed,
-            "collected": snap["collected"], "coverage_detail": snap["coverage_detail"]}
+            "collected": snap["collected"], "coverage_detail": snap["coverage_detail"], "activity": activity_summary(snap)}

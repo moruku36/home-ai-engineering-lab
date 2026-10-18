@@ -4,6 +4,7 @@ No network access to the real GitHub. Run: python tests/github_snapshot_test.py"
 import datetime as dt
 import json
 import os
+import re
 import sys
 import tempfile
 import threading
@@ -39,6 +40,11 @@ class World:
 
     def reset(self):
         self.requests = []          # (path, has_auth, auth_value)
+        self.activity = []          # TASK-122 part 2: previous-day items served to the window searches (see act())
+        self.window_queries = []    # search queries that carry created:/closed: ranges
+        self.window_fail = None     # (status, headers) returned for window searches only
+        self.search_incomplete = False
+        self.search_total = None    # override of total_count
         self.inject = {}            # path prefix -> list of (status, headers) consumed in order
         self.remaining = 4000
         self.repos = [self.repo("alpha", 1, issues=2), self.repo("beta", 3, issues=1), self.repo("gamma", 200), self.repo("delta", 5, archived=True),
@@ -96,6 +102,11 @@ class GitHubHandler(BaseHTTPRequestHandler):
                 return self._send(401, {"message": "Requires authentication"})
             items = [r for r in W.repos if (u.path == "/user/repos" or not r["private"])]
             return self._send(200, sl(items))
+        if u.path == "/search/issues" and "is:open" not in q["q"][0]:
+            return self._window_search(q["q"][0], auth, sl)
+        if len(p) == 5 and p[0] == "repos" and p[3] == "pulls":
+            a = next((x for x in W.activity if x["repo"] == p[2] and str(x["number"]) == p[4]), None)
+            return self._send(200, {"number": int(p[4]), "merged_at": a["merged"]}) if a else self._send(404, {"message": "Not Found"})
         if u.path == "/search/issues":
             kind = "pr" if "is:pr" in q["q"][0] else "issue"
             items = [{"repository_url": f"https://api.github.com/repos/moruku36/{v[1]}", "number": v[2], "title": v[3], "created_at": iso(v[4]), "updated_at": iso(v[5]),
@@ -115,6 +126,32 @@ class GitHubHandler(BaseHTTPRequestHandler):
         return self._send(404, {"message": "Not Found"})
 
 
+def _window_search(self, qq, auth, sl):
+    W.window_queries.append(qq)
+    if W.window_fail:
+        code, hdrs = W.window_fail
+        return self._send(code, {"message": "injected"}, hdrs)
+    kind = "pr" if "is:pr" in qq else "issue"
+    field, lo, hi = re.search(r"(created|closed):(\S+)\.\.(\S+)", qq).groups()
+    lo, hi = dt.datetime.fromisoformat(lo), dt.datetime.fromisoformat(hi)         # both ends INCLUSIVE, like the real qualifier
+    items = []
+    for a in W.activity:
+        v = a["created"] if field == "created" else a["closed"]
+        if a["kind"] != kind or v is None or not (auth or not W.repo_private(a["repo"])):
+            continue
+        if "is:closed" in qq and a["closed"] is None:
+            continue
+        if not (lo <= dt.datetime.fromisoformat(v.replace("Z", "+00:00")) <= hi):
+            continue
+        it = {"repository_url": f"https://api.github.com/repos/moruku36/{a['repo']}", "number": a["number"], "title": "t", "created_at": a["created"], "closed_at": a["closed"],
+              "html_url": "https://github.com/moruku36/x/pull/1", "user": {"login": "u"}}
+        if kind == "pr":
+            it["pull_request"] = {"url": "https://api.github.com/x"} if a.get("nokey") else {"url": "https://api.github.com/x", "merged_at": a["merged"]}
+        items.append(it)
+    return self._send(200, {"total_count": W.search_total or len(items), "incomplete_results": W.search_incomplete, "items": sl(items)})
+
+
+GitHubHandler._window_search = _window_search
 World.repo_private = lambda self, name: any(r["name"] == name and r["private"] for r in self.repos)
 
 
@@ -143,7 +180,7 @@ def serve(handler):
 def mkcfg(gh_url, kuma_url, token="", now=NOW, **kw):
     d = tempfile.mkdtemp()
     base = dict(api=gh_url, token=token, owners={"moruku36"}, state_dir=os.path.join(d, "state"), report_dir=os.path.join(d, "reports"), retry_base=0,
-                kuma_base=kuma_url, kuma_token=KUMA, max_calls=1500 if token else 45, now=lambda: now)
+                kuma_base=kuma_url, kuma_token=KUMA, max_calls=1500 if token else 45, now=lambda: now, activity=False)   # activity: tests 21+ turn it on
     base.update(kw)
     return gs.Config(**base)
 
@@ -151,6 +188,14 @@ def mkcfg(gh_url, kuma_url, token="", now=NOW, **kw):
 def read(p):
     with open(p, encoding="utf-8") as f:
         return f.read()
+
+
+def act(kind, repo, number, created, closed=None, merged=None, **kw):
+    return dict(kind=kind, repo=repo, number=number, created=created, closed=closed, merged=merged, **kw)
+
+
+# window for NOW (2026-10-15 09:00 JST): previous JST day = [2026-10-13T15:00:00Z, 2026-10-14T15:00:00Z)
+S0, E0 = "2026-10-13T15:00:00Z", "2026-10-14T15:00:00Z"
 
 
 def main():
@@ -437,6 +482,187 @@ def main():
         r = gs.run("moruku36", cfg)
         check("kept report: result carries the kept snapshot's flags",
               r.get("kept_previous") is True and r["collected"] == {"issues": True, "prs": True} and r["coverage_detail"]["searches"] == {"issues": "ok", "prs": "ok"}, r)
+
+        # ---- 21. TASK-122 part 2: previous-JST-day activity (Search API only, no new auth)
+        def base_world():
+            W.reset()
+            W.activity = [act("pr", "alpha", 10, S0, "2026-10-14T10:00:00Z", "2026-10-14T10:00:00Z"),        # opened at the first second, merged inside
+                          act("pr", "alpha", 11, "2026-10-13T14:59:59Z", "2026-10-14T01:00:00Z", None),      # opened 1s BEFORE the window, closed unmerged inside
+                          act("pr", "alpha", 12, "2026-10-14T14:59:59Z"),                                   # opened at the last second, still open
+                          act("pr", "beta", 13, E0),                                                         # opened exactly at the end -> outside (half-open)
+                          act("pr", "fork1", 7, "2026-10-14T05:00:00Z"),                                     # fork -> ignored
+                          act("pr", "priv", 2, "2026-10-14T05:00:00Z"),                                      # private -> only with a token
+                          act("issue", "alpha", 20, "2026-10-14T02:00:00Z", "2026-10-14T03:00:00Z")]         # opened and closed inside
+        base_world()
+        cfg = mkcfg(gh_url, km_url, activity=True)
+        r = gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        sec = rep.split("## 8.")[1].split("\n---")[0]
+        check("activity: window is the previous JST day, half-open", "2026-10-14 00:00 ≤ t < 2026-10-15 00:00 JST (half-open)" in sec, sec[:300])
+        check("activity: PRs opened = first and last second only (start-1s and end excluded)", "| PRs opened | 2 |" in sec and "alpha#10, alpha#12" in sec, sec)
+        check("activity: merged counts merged_at only; closed-unmerged is separate",
+              "| PRs merged | 1 |" in sec and "| PRs closed without merge | 1 |" in sec and "- PRs merged: alpha#10" in sec and "- PRs closed without merge: alpha#11" in sec, sec)
+        check("activity: issues opened / closed", "| Issues opened | 1 |" in sec and "| Issues closed | 1 |" in sec)
+        check("activity: fork items ignored and disclosed, private hidden without token", "1 search result(s) in forks" in sec and "priv#2" not in sec and "public repositories only" in sec, sec)
+        check("activity: wording does not promise a final value (index delay unverified, read time shown, 'complete' not used)",
+              "**not a final value for the day**" in sec and "Read from GitHub search at 2026-10-15 09:00 JST" in sec and "not verified here" in sec and "metrics complete" not in rep, sec[:700])
+        check("activity: query range is widened by 1s (inclusive qualifier), filtered exactly client-side",
+              all("2026-10-13T14:59:59+00:00..2026-10-14T15:00:00+00:00" in q for q in W.window_queries) and len(W.window_queries) == 4, W.window_queries)
+        check("activity: push events and commits are 'not collected' (never 0)", "| Push events | **not collected** |" in sec and "| Commits | **not collected** |" in sec)
+        check("activity: coverage row", "| Previous-day activity (section 8) | 5/5 metrics read in full (as of collection time; NOT a final value for the day (search-index delay is unverified)) | - |" in rep, rep.split("### Coverage")[1][:900])
+        check("activity: machine-readable summary, counts are numbers only when measured",
+              r["activity"]["prs_merged"] == {"status": "ok", "count": 1} and r["activity"]["prs_opened"]["count"] == 2, r["activity"])
+        check("activity: legacy result fields unchanged (n8n Summary node)", set(r["counts"]) == {"repos", "issues", "prs", "critical", "warn", "api_calls"} and r["partial"] is False)
+        check("activity: no Authorization header, no token-like text in report/snapshot", all(not a for _, a, _ in W.requests) and TOKEN not in rep)
+        check("activity: report stays far below the MCP read_report 64KiB limit", len(rep.encode()) < 16 * 1024, len(rep.encode()))
+        snapj = json.load(open(os.path.join(cfg.state_dir, "snapshots", "latest.json"), encoding="utf-8"))
+        check("activity: snapshot stores the window and keys only", snapj["activity"]["window"] == {"start": S0, "end": E0} and "title" not in json.dumps(snapj["activity"]))
+
+        base_world()
+        off = gs.run("moruku36", mkcfg(gh_url, km_url))
+        base_world()
+        cfg_on = mkcfg(gh_url, km_url, activity=True)
+        gs.run("moruku36", cfg_on)
+        rem_on = json.load(open(os.path.join(cfg_on.state_dir, "snapshots", "latest.json"), encoding="utf-8"))["rate_remaining"]
+        check("activity: 'rate limit remaining' keeps the figure of the regular checks (not the small search bucket)", rem_on == 4000 - off["counts"]["api_calls"], (rem_on, off["counts"]["api_calls"]))
+
+        # ---- 22. authenticated: private repositories are counted and the scope says so
+        base_world()
+        cfg = mkcfg(gh_url, km_url, token=TOKEN, activity=True)
+        r = gs.run("moruku36", cfg)
+        sec = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md")).split("## 8.")[1]
+        check("activity (token): private PR counted, scope says public + private", "| PRs opened | 3 |" in sec and "public + private (read-only token)" in sec and "priv#2" in sec, sec[:500])
+
+        # ---- 23. closed is not merged: a search item without merged_at is resolved via the pull request, never guessed
+        base_world()
+        W.activity += [act("pr", "alpha", 30, "2026-10-12T00:00:00Z", "2026-10-14T06:00:00Z", "2026-10-14T06:00:00Z", nokey=True),   # no merged_at in the search item -> GET pulls
+                       act("pr", "alpha", 31, "2026-10-12T00:00:00Z", "2026-10-14T07:00:00Z", None, nokey=True)]
+        cfg = mkcfg(gh_url, km_url, activity=True)
+        r = gs.run("moruku36", cfg)
+        sec = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md")).split("## 8.")[1]
+        check("activity: fallback to /pulls resolves merged vs closed", "| PRs merged | 2 |" in sec and "| PRs closed without merge | 2 |" in sec and any("/pulls/30" in p for p, _, _ in W.requests), sec[:700])
+        base_world()
+        W.activity += [act("pr", "alpha", 30, "2026-10-12T00:00:00Z", "2026-10-14T06:00:00Z", "2026-10-14T06:00:00Z", nokey=True)]
+        W.inject["/repos/moruku36/alpha/pulls"] = [(404, {})]
+        cfg = mkcfg(gh_url, km_url, activity=True)
+        r = gs.run("moruku36", cfg)
+        sec = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md")).split("## 8.")[1]
+        check("activity: unresolved PR is neither merged nor unmerged -> lower bound with the reason",
+              "| PRs merged | ≥1 (incomplete:" in sec and "could not be determined for 1 PR(s): alpha#30" in sec and r["activity"]["prs_merged"]["status"] == "incomplete", sec[:700])
+
+        # ---- 24. failures: 'not collected' with a reason, never 0; the rest of the run is unaffected
+        for code, hdrs, why in ((403, {"X-RateLimit-Remaining": "0"}, "rate limit"), (422, {}, "search API error")):
+            base_world()
+            W.window_fail = (code, hdrs)
+            cfg = mkcfg(gh_url, km_url, activity=True)
+            r = gs.run("moruku36", cfg)
+            rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+            sec = rep.split("## 8.")[1]
+            check(f"activity failure ({code}): every metric 'not collected' with reason, no zero", sec.count("**not collected**") >= 7 and why in sec and "| PRs opened | 0 |" not in sec and "| PRs merged | 0 |" not in sec, sec[:600])
+            check(f"activity failure ({code}): run unaffected (not partial, legacy sections and counts intact, Kuma up)",
+                  r["partial"] is False and r["counts"]["issues"] >= 1 and "| Open issues (search) | collected | - |" in rep and KumaHandler.pushes[-1][1] in ("up", "down")
+                  and all(m["count"] is None for m in r["activity"].values()), r["activity"])
+        # ---- 24b. the real unauthenticated case: MAX_API_CALLS=45 and many active repositories.
+        #      Section 8 has priority over the per-repository checks (they give way, and Coverage says so).
+        def busy_world(n=30):
+            base_world()
+            W.repos += [W.repo(f"act{i:02d}", 1) for i in range(n)]                 # n more active (non-fork, pushed <=14d) repositories
+        busy_world()
+        cfg = mkcfg(gh_url, km_url, activity=True)                                  # max_calls=45 (unauthenticated default)
+        check("budget: unauthenticated default is 45", cfg.max_calls == 45 and cfg.activity_reserve == 6)
+        r = gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        cov = rep.split("### Coverage")[1].split("## 1.")[0]
+        check("budget: all five PR/Issue metrics are measured (none 'not collected')", all(m["status"] == "ok" and m["count"] is not None for m in r["activity"].values()), r["activity"])
+        check("budget: PR/Issue figures are the real ones", r["activity"]["prs_opened"]["count"] == 2 and r["activity"]["prs_merged"]["count"] == 1 and r["activity"]["issues_closed"]["count"] == 1)
+        check("budget: stays within MAX_API_CALLS", r["counts"]["api_calls"] <= 45 and r["counts"]["api_calls"] == len(W.requests), (r["counts"]["api_calls"], len(W.requests)))
+        check("budget: Coverage shows the cost - fewer repositories checked, reason names the reserve",
+              re.search(r"\| last commit \| (\d+)/32 repositories checked \| per-run API call budget reached \(MAX_API_CALLS=45; 6 calls are held back for section 8", cov) is not None
+              and int(re.search(r"\| last commit \| (\d+)/32", cov).group(1)) < 32, cov)
+        check("budget: partial is set by the per-repository passes (as before), activity metrics complete", r["partial"] is True and "| Previous-day activity (section 8) | 5/5 metrics read in full (as of collection time" in cov)
+        # the problem this fixes: without a reserve the same run leaves section 8 entirely 'not collected'
+        busy_world()
+        cfg0 = mkcfg(gh_url, km_url, activity=True, activity_reserve=0)
+        r0 = gs.run("moruku36", cfg0)
+        check("budget (no reserve = the old behaviour): every metric lost to call_budget", all(m["status"] == "call_budget" and m["count"] is None for m in r0["activity"].values()), r0["activity"])
+        # a tight reserve: 4 searches + only 1 pull-request lookup -> the rest is reported as a lower bound with the reason
+        busy_world()
+        W.activity += [act("pr", "alpha", 40 + i, "2026-10-12T00:00:00Z", "2026-10-14T06:00:00Z", "2026-10-14T06:00:00Z", nokey=True) for i in range(3)]
+        cfgt = mkcfg(gh_url, km_url, activity=True, activity_reserve=5)
+        rt = gs.run("moruku36", cfgt)
+        sect = read(os.path.join(cfgt.report_dir, "github-daily-2026-10-15.md")).split("## 8.")[1]
+        check("budget: not enough calls for PR details -> merged is '>=N' with the reason, never a bare number",
+              rt["counts"]["api_calls"] <= 45 and rt["activity"]["prs_merged"]["status"] == "incomplete" and "| PRs merged | ≥" in sect and "could not be determined" in sect, sect[:600])
+        check("budget: opened/closed issue figures stay exact in that case", rt["activity"]["prs_opened"]["status"] == "ok" and rt["activity"]["issues_opened"]["status"] == "ok")
+        # budget exactly spent before the repository passes even start: activity still runs, checks report 0/N
+        busy_world()
+        cfgs = mkcfg(gh_url, km_url, activity=True, max_calls=12)
+        rs = gs.run("moruku36", cfgs)
+        check("budget: tiny MAX_API_CALLS -> activity keeps its calls, per-repository checks give way", rs["counts"]["api_calls"] <= 12 and rs["activity"]["prs_opened"]["status"] in ("ok", "call_budget"), rs["counts"])
+
+        # search_window keeps what it read when a later page cannot be fetched (lower bound + reason)
+        class StubGH:
+            def __init__(self):
+                self.n = 0
+
+            def get(self, path, params=None, allow=()):
+                self.n += 1
+                if self.n == 1:
+                    return 200, {"total_count": 250, "incomplete_results": False, "items": [{"number": i} for i in range(100)]}
+                raise gs.BudgetExhausted("call_budget")
+        items, why = gs.search_window(StubGH(), "q")
+        check("search_window: budget gone after page 1 -> 100 items and the reason", len(items) == 100 and why and "stopped after 100 result(s)" in why and "budget" in why, why)
+        class StubGH0(StubGH):
+            def get(self, path, params=None, allow=()):
+                raise gs.BudgetExhausted("rate_limit")
+        try:
+            gs.search_window(StubGH0(), "q")
+            check("search_window: nothing read -> raises (metric becomes 'not collected')", False)
+        except gs.BudgetExhausted:
+            check("search_window: nothing read -> raises (metric becomes 'not collected')", True)
+
+        # ---- 25. GitHub says the result is incomplete / too large -> lower bound, never an exact-looking number
+        for kw, why in (({"search_incomplete": True}, "incomplete_results"), ({"search_total": 1500}, "more than 1000")):
+            base_world()
+            for k, v in kw.items():
+                setattr(W, k, v)
+            cfg = mkcfg(gh_url, km_url, activity=True)
+            r = gs.run("moruku36", cfg)
+            sec = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md")).split("## 8.")[1]
+            check(f"activity: {why} -> '≥N (incomplete: ...)'", "| PRs opened | ≥2 (incomplete:" in sec and why in sec and r["activity"]["prs_opened"]["status"] == "incomplete", sec[:500])
+            W.search_incomplete, W.search_total = False, None
+
+        # ---- 26. pagination (>100 results) and de-duplication
+        base_world()
+        W.activity = [act("pr", "alpha", 100 + i, "2026-10-14T05:00:00Z") for i in range(150)] + [act("pr", "alpha", 100, "2026-10-14T05:00:00Z")]   # one duplicate
+        cfg = mkcfg(gh_url, km_url, activity=True)
+        r = gs.run("moruku36", cfg)
+        check("activity: 150 PRs read over 2 pages, duplicate counted once", r["activity"]["prs_opened"] == {"status": "ok", "count": 150}, r["activity"]["prs_opened"])
+
+        # ---- 27. repositories by latest push time: count of repositories, with the unknown part stated
+        base_world()
+        W.repos[1]["pushed_at"] = iso(0)                              # beta pushed AFTER the window end
+        cfg = mkcfg(gh_url, km_url, activity=True)
+        gs.run("moruku36", cfg)
+        sec = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md")).split("## 8.")[1]
+        check("activity: repos whose latest push is in the window (alpha) vs pushed later (beta, unknown)",
+              "| Repositories whose LATEST push time is in the window | 1 |" in sec and "NOT a push count or commit count" in sec
+              and "| Repositories pushed after the window (activity inside the window unknown) | 1 |" in sec and "- Repositories whose latest push is in the window: alpha" in sec, sec[:900])
+
+        # ---- 28. switched off: report and requests are exactly the legacy ones
+        base_world()
+        cfg = mkcfg(gh_url, km_url, activity=False)
+        r = gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        check("activity off: no section 8, no window search, no 'activity' data", "## 8." not in rep and not W.window_queries and r["activity"] is None and "Previous-day activity" not in rep)
+
+        # ---- 29. default configuration has the section switched on (production behaviour)
+        check("activity: on by default, GITHUB_ACTIVITY=0 switches it off", gs.Config().activity is True)
+        os.environ["GITHUB_ACTIVITY"] = "0"
+        try:
+            check("activity: GITHUB_ACTIVITY=0 -> off", gs.Config().activity is False)
+        finally:
+            del os.environ["GITHUB_ACTIVITY"]
     finally:
         gh.shutdown()
         km.shutdown()

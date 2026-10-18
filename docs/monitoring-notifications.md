@@ -14,7 +14,7 @@ English first, Japanese below each section. Status as of 2026-10-15. / 各節は
 | GitHub Actions failing on a default branch | collector → Kuma push `down` | yes | one per state change; details in the daily report |
 | Critical Dependabot alert (token needed) | collector → Kuma push `down` | yes | same |
 | Collector fails / does not run for 26 h | Kuma push monitor (no heartbeat → `down`) | yes | same |
-| New issues/PRs, repositories with a changed last-push time (not a push count), stale items, partial data | daily report | **no** | collected in the 07:00 JST report |
+| New issues/PRs, previous-day PR/issue counts (section 8), repositories with a changed last-push time (not a push count), stale items, partial data | daily report | **no** | collected in the 07:00 JST report |
 | Open WebUI (stopped on purpose) | monitor **paused** | no | resume together with the service |
 
 **JA:** 通常の更新は日次レポートへ集約し、対応が必要なものだけ通知します。Kuma は状態変化ごとに1回だけ通知します（瞬断対策としてリトライ2回）。停止中の Open WebUI の監視は一時停止してあります（再開時にあわせて再開）。
