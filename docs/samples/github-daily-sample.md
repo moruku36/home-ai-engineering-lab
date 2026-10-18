@@ -21,6 +21,20 @@ _Generated 2026-10-15 09:00 JST · read-only · 12 API calls · authenticated (r
 - **GitHub Actions failing on default branch of example-infra: CI (failure)** — https://github.com/o/r/actions/runs/900
 - **Dependabot: 0 critical / 1 high open alert(s) in example-app**
 
+### Coverage / 取得範囲
+
+| Check | Collected | Not collected: reason |
+|---|---|---|
+| Repository list | 5 repositories (public + private) | - |
+| Open issues (search) | collected | - |
+| Open PRs (search) | collected | - |
+| Active repositories (non-fork, not archived, pushed ≤14d) | 3 found, 3 eligible for per-repository checks | - |
+| GitHub Actions | 3/3 repositories checked | - |
+| last commit | 3/3 repositories checked | - |
+| Dependabot alerts | 3/3 repositories checked | - |
+| API calls | 12 of 1500 allowed | - |
+| GitHub rate limit remaining (as reported by GitHub) | 4988 | - |
+
 ## 1. Recently updated repositories / 最近更新（7日以内）
 
 | Repository | Visibility | Last push (JST) | Last commit | Open issues |
@@ -28,7 +42,7 @@ _Generated 2026-10-15 09:00 JST · read-only · 12 API calls · authenticated (r
 | example-app | public | 2026-10-14 09:00 | abcdef1 update example-app | 2 |
 | example-private | private | 2026-10-13 09:00 | abcdef1 update example-private | 0 |
 | example-infra | public | 2026-10-12 09:00 | abcdef1 update example-infra | 1 |
-| archived-demo | public | 2026-10-10 09:00 | - | 0 |
+| archived-demo | public | 2026-10-10 09:00 | not checked (outside active set) | 0 |
 
 ## 2. New / updated issues / 新規・更新Issue（直近2日）
 

@@ -37,6 +37,10 @@ Sample (synthetic data): [samples/github-daily-sample.md](samples/github-daily-s
 
 - **EN:** Forks are counted but not analysed. Private repositories need a token. The report starts with a "Data completeness" box whenever anything could not be collected.
 - **JA:** フォークは件数のみ。非公開リポジトリはトークンが必要。取得できなかったものがあると、レポート冒頭の「データの完全性」に明記します。
+- **EN:** Every report has a **Coverage** table right after the summary: which checks ran, how many repositories were checked (N/M), and *why* something was not collected (GitHub rate limit, per-run call budget, search API error, no token). Anything not collected is shown as "not collected" — never as `0` or "None".
+- **EN:** Section 7 compares two snapshots (previous run → this run), **not calendar days**. "Repositories whose last-push time changed" lists repository *names*; it is **not** a count of pushes or commits. "PRs no longer open" means closed **or** merged — only open PRs are collected, so the report cannot tell which. An item opened and closed between two snapshots is never seen. If open issues/PRs were not collected in either snapshot, that part reads "not compared" instead of listing every item as closed (or new). The report gives **no daily push or merge counts** (see section 13 for a design proposal).
+- **JA:** 各レポートには、サマリー直後に**取得範囲（Coverage）**の表があります。実行した確認、確認できたリポジトリ数（N/M）、未取得の**理由**（GitHubのレート制限・実行ごとの呼び出し上限・検索APIエラー・トークンなし）を示します。取得できなかったものは `0` や「なし」ではなく「not collected」と表示します。
+- **JA:** セクション7は2つのスナップショット（前回実行→今回実行）の比較で、**暦日ではありません**。「最終push時刻が変わったリポジトリ」はリポジトリ**名**の一覧で、push数・コミット数では**ありません**。「open でなくなったPR」はクローズ**またはマージ**で、openのPRだけを集めるため区別できません。2回の収集の間に開閉した項目は見えません。どちらかの収集で open の issue/PR が取得できていなければ、全件を closed（または new）と並べず「not compared」と表示します。**日次のpush数・merge数は出しません**（設計案はセクション13）。
 
 ## 3. API budget and degradation / API 呼び出し予算と縮退
 
@@ -170,3 +174,43 @@ for line in sys.stdin:
 **Approval boundary:** publishing or importing the live workflow, changing its schedule or credentials, manually executing it, and sending the report are production actions. Record the evidence above and obtain explicit approval for the smallest needed change. Never run `ops-deploy.sh` for diagnosis.
 
 **JA:** ソースでは07:00 JSTのcronを確認。保存JSONの`active: false`は実機の状態の証拠にはならない。旧配備スクリプトは公開失敗を無視し得たため修正した。実機の根本原因は未確定。上の読み取り調査の後、本番の公開・実行・監視設定には明示承認が必要。
+
+## 12. Reading the run result: `partial`, `authenticated`, `warn` (TASK-122 follow-up)
+
+Source: `stacks/n8n/python-jobs/github_snapshot.py` (`collect`, `derive_alerts`, `run`). These are code facts; the live values of a given run are not inferred here.
+
+| Field | Meaning | Not a sign of |
+|---|---|---|
+| `authenticated` | `true` only if `GITHUB_TOKEN` is set | – (`false` is the documented token-less mode) |
+| `partial` | `true` if open issues/PRs could not be searched **or were read only partly** (see below), or a per-repository pass (Actions / last commit / Dependabot) stopped early or failed for some repositories | a missing token by itself (that only adds a note) |
+| `counts.warn` | number of non-critical alerts = stale issues/PRs (not updated for ≥ `STALE_DAYS`, default 30) **plus one** `collector:partial` alert whenever `partial` is `true` | a failure |
+| `collected` | `{issues, prs}`: were open issues / PRs read **completely** (`false` also when only some were read) | – |
+| `coverage_detail` | per search and per pass: `ok`, `incomplete` (some items read, with the reason in `search_why`), or the stop reason (`rate_limit`, `call_budget`, `api_error`, `no_token`), N/M checked, active-repository total | – |
+
+- **EN:** With `partial: true`, one of the `warn` alerts is the partial notice itself; the remaining ones are stale issues/PRs (this counts items in forks too, while the report's "Stale" row counts only own repositories). Which items are stale is only visible in the report body.
+- **EN:** `call_budget` = our own `MAX_API_CALLS` (45 without a token). `rate_limit` = GitHub reported the limit as reached, or fewer than 3 calls remaining. `coverage_detail` and `collected` are in the job's JSON response, so the n8n execution output shows *why* a run was partial without opening the report.
+- **EN (incomplete searches):** the open-item search reads at most 5 pages of 100 (500 items), and GitHub search itself returns at most 1,000 results and can set `incomplete_results` after a timeout. The collector compares what it read with `total_count`; if it cannot show that everything was read (more matches than items read, `incomplete_results`, or 5 full pages with no `total_count`), the bucket is `incomplete`: the report shows `≥N (incomplete)` and the Coverage reason, the bucket is **not compared** in the diff (nothing is called closed or new), `partial` is set (a normal partial run for Kuma), and a same-day re-run that is less complete never replaces a more complete report. Snapshots written before this change cannot show truncation, so one with ≥ 500 open items is not trusted for comparison.
+- **EN (Actions diff):** "New Actions failures" compares only repositories whose Actions were read in **both** snapshots. A repository that was eligible but not read in one of them (call budget, rate limit, API error) is listed as "Actions not compared for N repositories" — its old failures are not reported as new, and a bare "none" is never an all-clear for it. **JA:** 「New Actions failures」は前回・今回の両方でActionsを読めたリポジトリだけを比較します。どちらかで読めなかったリポジトリは「Actions not compared」として列挙し、既存の失敗を新規と誤表示せず、「none」を全て問題なしの意味にもしません。
+- **JA:** `partial: true` のとき `warn` の1件は「partial の通知」そのもので、残りが stale な issue/PR です（フォーク上の項目も数えますが、レポートの「Stale」行は自分のリポジトリのみ）。どの項目かはレポート本文でのみ分かります。`call_budget` は自前の `MAX_API_CALLS`（トークンなしで45）、`rate_limit` はGitHubの上限到達または残り3未満です。`coverage_detail` と `collected` はジョブのJSON応答に含まれるため、n8nの実行出力で、レポートを開かずに partial の理由を確認できます。
+
+## 13. Proposal: true daily push / merge counts — NOT implemented
+
+**Status:** design only. No code, token, permission or production change was made for this section. Items marked *(verify)* were not checked against GitHub's official documentation when this was written and must be before implementation.
+
+**Why the current report cannot answer it:** the collector sees only repositories' `pushed_at`, the *currently open* issues/PRs and one last commit per repository (budget permitting). It does not read pushes, commits or merged PRs (section 2).
+
+**First decide the metric** (they are different numbers): (a) merged PRs, (b) push events, (c) distinct commits on the default branch. The report must name the metric it shows.
+
+| Topic | Proposal |
+|---|---|
+| JST window | Fixed window for a JST day D: `[D 00:00 JST, D+1 00:00 JST)` = `[(D-1) 15:00:00Z, D 15:00:00Z)`. The 07:00 JST run reports the previous day D. The window never depends on the run time; the result is stored per JST day in the snapshot, so a same-day re-run replaces (never adds to) it. |
+| Merged PRs | Search API `is:pr is:merged merged:<start>..<end>` for `user:<owner>` — 1 call + 1 per 100 results. Re-check `pull_request.merged_at` against the window locally. Search has its own rate-limit bucket and a result cap *(verify)*. |
+| Push events | Events API `/users/<owner>/events/public`, `PushEvent` only. Public events only, limited history and delivery delay *(verify)*, so completeness cannot be proven: show "at least N" or "not collected", never a bare N. |
+| Commits | Per repository `commits?since&until` on the default branch = up to N calls (active repositories ≤ 40). Does not fit the 45-call budget without a token; fits the token budget (1,500). Counts merge commits unless filtered. |
+| Deduplication | PR by `repo#number`; push event by event id; commit by SHA within a repository (the same commit pushed to two branches, or via a PR and then `main`, counts once). Re-runs are idempotent because the window is fixed. |
+| Permissions | Public data: no token. Private repositories: a fine-grained **read-only** token (Metadata, Contents, Pull requests) *(verify exact names)*. This change requests none. |
+| Budget | +1 to +4 calls for (a)/(b); place before the "last commit" pass, which already goes partial first. (c) needs the token budget. |
+| Failure semantics | Not collected ⇒ `activity: null` + a reason in `coverage_detail`; never `0`. Mark `partial`. |
+| Tests (fake API) | Boundary events at `14:59:59Z` / `15:00:00Z`; duplicate event ids and SHAs; merged vs closed-without-merge; truncated result pages ⇒ "at least"; rate limit mid-way ⇒ not collected; same-day re-run idempotent; unauthenticated run sends no `Authorization` header. |
+
+**JA:** 本節は設計案のみで、コード・トークン・権限・本番の変更はしていません（*(verify)* は公式ドキュメント未確認で、実装前に要確認）。現行のレポートはpush数・merge数を出せません（pushed_at、現在openのissue/PR、最終コミット1件しか見ていないため）。先に指標を決めます：(a)マージ済みPR数、(b)pushイベント数、(c)デフォルトブランチのコミット数は別の数字です。集計窓はJST日 D の `[D 00:00 JST, D+1 00:00 JST)`（=UTC `[(D-1) 15:00Z, D 15:00Z)`）で固定し、07:00 JSTの実行は前日Dを報告します。日ごとに保存するので同日再実行は上書きで二重計上しません。重複排除はPRを `repo#number`、pushイベントをイベントID、コミットをSHAで行います。取得できない場合は `0` ではなく「not collected」とし理由を記録します。公開データはトークン不要ですが、イベントAPIは公開のみ・履歴と遅延に制限があり網羅性を証明できないため「少なくともN」と表示します。コミット数はリポジトリ数ぶんの呼び出しが要り、トークン時の予算で収まります。非公開リポジトリには読み取り専用の細粒度トークンが必要ですが、この変更では要求していません。
