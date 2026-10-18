@@ -54,6 +54,7 @@ class World:
                        "fork1#1": ("issue", "fork1", 1, "Upstream issue", 2, 2), "beta#5": ("pr", "beta", 5, "Add feature | pipe\n# injected", 10, 10)}
         self.runs = {"alpha": [self.run(1, "success", 1)], "beta": [self.run(900, "failure", 1), self.run(899, "failure", 4), self.run(898, "success", 6)]}
         self.dependabot = {"alpha": [{"security_vulnerability": {"severity": "critical"}}, {"security_vulnerability": {"severity": "high"}}, {"security_vulnerability": {"severity": "low"}}]}
+        self.dependabot_fail = {"beta"}
 
     @staticmethod
     def repo(name, pushed_days, issues=0, fork=False, archived=False, private=False):
@@ -120,7 +121,7 @@ class GitHubHandler(BaseHTTPRequestHandler):
         if len(p) == 5 and p[0] == "repos" and p[3] == "dependabot":
             if not auth:
                 return self._send(403, {"message": "Resource not accessible"})
-            if p[2] == "beta":
+            if p[2] in getattr(W, "dependabot_fail", {"beta"}):
                 return self._send(403, {"message": "Resource not accessible by personal access token"})
             return self._send(200, W.dependabot.get(p[2], []))
         return self._send(404, {"message": "Not Found"})
@@ -460,7 +461,7 @@ def main():
         check("complete unauthenticated run: full coverage rows",
               all(s in rep for s in ["| Repository list | 135 repositories (public only) | - |", "| Open issues (search) | collected | - |", "| Open PRs (search) | collected | - |",
                                      "| GitHub Actions | 2/2 repositories checked | - |", "| last commit | 2/2 repositories checked | - |"]), [l for l in rep.splitlines() if l.startswith("| ") and "|" in l][:25])
-        check("complete run: nothing reads 'not collected' except the token-only checks", rep.count("not collected") == 2 and "**not compared**" not in rep and "Not collected in this run" not in rep, rep.count("not collected"))
+        check("complete run: nothing reads 'not collected' except the token-only checks", rep.count("not collected") == 4 and "**not compared**" not in rep and "Not collected in this run" not in rep, rep.count("not collected"))
         check("repository outside the active set (archived delta) says 'not checked', not 'not collected'", "| delta | public | 2026-10-10 09:00 | not checked (outside active set) | 0 |" in rep)
         W.reset()
         cfg = mkcfg(gh_url, km_url, token=TOKEN)
@@ -801,6 +802,82 @@ def main():
             check("activity: GITHUB_ACTIVITY=0 -> off", gs.Config().activity is False)
         finally:
             del os.environ["GITHUB_ACTIVITY"]
+
+        # ---- 30. TASK-122: Markdown Summary visibility and coverage boundaries
+        # Matrix: authenticated (yes/no) x observed (zero/non-zero) x coverage (full/partial/uncollected)
+
+        # 30.1: unauthenticated x zero observed x full Actions coverage
+        base_world()
+        W.runs["beta"] = [W.run(900, "success", 1)]  # no critical failures
+        cfg = mkcfg(gh_url, km_url)
+        gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        check("summary: unauthenticated -> Private (own) says 'not collected / 未取得', not 0",
+              "| Private (own) | not collected / 未取得 |" in rep)
+        check("summary: unauthenticated + zero observed -> Critical alerts clarifies observed in checked sources and Dependabot not collected",
+              "| Critical alerts | 0 (observed in checked sources; Dependabot not collected / 未取得) |" in rep)
+
+        # 30.2: unauthenticated x non-zero observed x full Actions coverage
+        base_world()  # beta has failing run 900 -> 1 critical alert
+        cfg = mkcfg(gh_url, km_url)
+        gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        check("summary: unauthenticated + non-zero observed -> Critical alerts shows count and Dependabot not collected",
+              "| Critical alerts | 1 (observed in checked sources; Dependabot not collected / 未取得) |" in rep)
+
+        # 30.3: unauthenticated x zero observed x partial Actions coverage (incomplete)
+        base_world()
+        W.runs["beta"] = [W.run(900, "success", 1)]
+        cfg = mkcfg(gh_url, km_url, max_calls=5)  # repo list (2) + searches (2) + Actions stops on budget
+        gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        check("summary: unauthenticated + Actions incomplete -> both qualifiers shown, never bare zero",
+              "| Critical alerts | 0 (observed in checked sources; Actions incomplete; Dependabot not collected / 未取得) |" in rep)
+
+        # 30.4: authenticated x zero observed x full coverage
+        base_world()
+        W.runs["beta"] = [W.run(900, "success", 1)]  # no Actions failures
+        W.dependabot = {"alpha": [], "beta": [], "priv": []}  # no Dependabot alerts
+        W.dependabot_fail = set()  # all repos 200 OK
+        cfg = mkcfg(gh_url, km_url, token=TOKEN)
+        gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        check("summary: authenticated + full coverage -> Private (own) shows actual measured count",
+              "| Private (own) | 1 |" in rep)
+        check("summary: authenticated + full coverage + zero observed -> Critical alerts is bare 0",
+              "| Critical alerts | 0 |" in rep)
+
+        # 30.5: authenticated x non-zero observed x full coverage
+        base_world()
+        W.runs["beta"] = [W.run(900, "failure", 1)]  # 1 Actions critical
+        W.dependabot = {"alpha": [], "beta": [], "priv": []}
+        W.dependabot_fail = set()
+        cfg = mkcfg(gh_url, km_url, token=TOKEN)
+        gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        check("summary: authenticated + full coverage + non-zero observed -> Critical alerts is bare count",
+              "| Critical alerts | 1 |" in rep)
+
+        # 30.6: authenticated x zero observed x partial coverage (Dependabot incomplete)
+        base_world()
+        W.runs["beta"] = [W.run(900, "success", 1)]
+        W.dependabot = {"alpha": [], "priv": []}
+        W.dependabot_fail = {"beta"}  # beta returns 403 -> partial / incomplete
+        cfg = mkcfg(gh_url, km_url, token=TOKEN)
+        gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        check("summary: authenticated + Dependabot incomplete -> Dependabot incomplete qualifier shown, never bare zero",
+              "| Critical alerts | 0 (observed in checked sources; Dependabot incomplete) |" in rep)
+
+        # 30.7: authenticated x zero observed x Dependabot not collected (token lacks permission for all repos)
+        base_world()
+        W.runs["beta"] = [W.run(900, "success", 1)]
+        W.dependabot_fail = {"alpha", "beta", "priv"}  # all return 403 -> unavailable across all repos
+        cfg = mkcfg(gh_url, km_url, token=TOKEN)
+        gs.run("moruku36", cfg)
+        rep = read(os.path.join(cfg.report_dir, "github-daily-2026-10-15.md"))
+        check("summary: authenticated + Dependabot unavailable on all -> Dependabot not collected qualifier shown",
+              "| Critical alerts | 0 (observed in checked sources; Dependabot not collected / 未取得) |" in rep)
     finally:
         gh.shutdown()
         km.shutdown()

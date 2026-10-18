@@ -637,6 +637,72 @@ def build_report(cfg, snap, alerts, d, state, now):
     def open_cell(bucket, n):       # a lower bound is shown as one, a missing search as "not collected"
         st = search_state(snap, bucket)
         return str(n) if st == "ok" else (f"≥{n} (incomplete)" if st == "incomplete" else n_a)
+
+    private_cell = str(sum(1 for r in own.values() if r["private"])) if snap["authenticated"] else "not collected / 未取得"
+
+    def critical_cell():
+        cov = snap.get("coverage_detail") or {}
+        passes = cov.get("passes") or {}
+
+        p_act = passes.get("GitHub Actions")
+        if not p_act:
+            act_status = "ok" if snap.get("actions") else "not_collected"
+        else:
+            tot, done = p_act.get("total", 0), p_act.get("done", 0)
+            if tot == 0:
+                act_status = "ok"
+            elif done == 0:
+                act_status = "not_collected"
+            elif done < tot or p_act.get("stopped") or p_act.get("failed", 0) > 0:
+                act_status = "incomplete"
+            else:
+                act_status = "ok"
+
+        if not snap.get("authenticated"):
+            dep_status = "not_collected"
+        else:
+            p_dep = passes.get("Dependabot alerts")
+            if not p_dep:
+                dep_status = "ok" if snap.get("dependabot") else "not_collected"
+            else:
+                tot, done = p_dep.get("total", 0), p_dep.get("done", 0)
+                if p_dep.get("stopped") == "no_token":
+                    dep_status = "not_collected"
+                elif tot == 0:
+                    dep_status = "ok"
+                elif done == 0:
+                    dep_status = "not_collected"
+                else:
+                    dep_data = snap.get("dependabot") or {}
+                    avail = sum(1 for d_ in dep_data.values() if d_.get("available"))
+                    unavail = sum(1 for d_ in dep_data.values() if not d_.get("available"))
+                    if done < tot or p_dep.get("stopped") or p_dep.get("failed", 0) > 0:
+                        dep_status = "incomplete"
+                    elif unavail > 0 and avail == 0:
+                        dep_status = "not_collected"
+                    elif unavail > 0:
+                        dep_status = "incomplete"
+                    else:
+                        dep_status = "ok"
+
+        if act_status == "ok" and dep_status == "ok":
+            return str(len(crit))
+        if act_status == "not_collected" and dep_status == "not_collected":
+            return "not collected / 未取得"
+
+        qualifiers = []
+        if act_status == "incomplete":
+            qualifiers.append("Actions incomplete")
+        elif act_status == "not_collected":
+            qualifiers.append("Actions not collected")
+
+        if dep_status == "not_collected":
+            qualifiers.append("Dependabot not collected / 未取得")
+        elif dep_status == "incomplete":
+            qualifiers.append("Dependabot incomplete")
+
+        return f"{len(crit)} (observed in checked sources; {'; '.join(qualifiers)})"
+
     active_set = set(snap.get("active_repos", []))     # repositories eligible for per-repository checks (archived / forks / over the cap are not)
     L = [f"# GitHub daily report — {owner} — {today:%Y-%m-%d} (JST)", "",
          f"_Generated {today:%Y-%m-%d %H:%M} JST · read-only · {snap['api_calls']} API calls · "
@@ -647,9 +713,9 @@ def build_report(cfg, snap, alerts, d, state, now):
           "| Item | Count |", "|---|---|",
           f"| Repositories (own / forks) | {len(own)} / {forks} |",
           f"| Archived (own) | {sum(1 for r in own.values() if r['archived'])} |",
-          f"| Private (own) | {sum(1 for r in own.values() if r['private'])} |",
+          f"| Private (own) | {private_cell} |",
           f"| Open issues (own repos) | {open_cell('issues', len(issues_own))} |", f"| Open PRs (own repos) | {open_cell('prs', len(prs_own))} |",
-          f"| Critical alerts | {len(crit)} |",
+          f"| Critical alerts | {critical_cell()} |",
           f"| Stale issues/PRs (≥{cfg.stale_issue_days}d) | {len(stale_items) if (got_issues and got_prs) else str(len(stale_items)) + ' (incomplete: open issues/PRs not fully collected)'} |", ""]
     if crit:
         L += ["### ⚠️ Critical alerts / 重要な警告", ""] + [f"- **{md(a['text'], 200)}**" + (f" — {a['url']}" if a["url"] else "") for a in crit] + [""]
