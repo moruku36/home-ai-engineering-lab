@@ -371,8 +371,15 @@ def diff(prev, snap):
         else:
             d[new_k] = d[closed_k] = None
             d["not_compared"].append(bucket)
-    old ={f["id"] for a in prev.get("actions", {}).values() for f in a.get("failures", [])}
-    d["new_failures"] = sorted(f"{n}: {f['name']} #{f['id']}" for n, a in snap["actions"].items() for f in a["failures"] if f["id"] not in old)
+    # Actions: a failure is only "new" if the repository was READ in the previous snapshot. A repository that was eligible for the check
+    # but not read (call budget / rate limit / API error) in either snapshot cannot be compared: it is listed, never reported as new
+    # (its old failures would look new) and never as an all-clear (a new failure there would be missed).
+    def eligible(x):
+        return set(x.get("active_repos") or x.get("actions", {}))        # older snapshots without the list: only what was read
+    unread = (eligible(prev) - set(prev.get("actions", {}))) | (eligible(snap) - set(snap.get("actions", {})))
+    d["failures_not_compared"] = sorted(unread)
+    old = {f["id"] for n, a in prev.get("actions", {}).items() if n not in unread for f in a.get("failures", [])}
+    d["new_failures"] = sorted(f"{n}: {f['name']} #{f['id']}" for n, a in snap["actions"].items() if n not in unread for f in a["failures"] if f["id"] not in old)
     return d
 
 
@@ -523,7 +530,9 @@ def build_report(cfg, snap, alerts, d, state, now):
             if d[key] is None:
                 L.append(f"- {label}: **not compared** (open {bucket_of[key]} were not collected, or only partly read, in this or the previous snapshot)")
                 continue
-            L.append(f"- {label}: " + (", ".join(md(x) for x in d[key][:20]) + (f" … +{len(d[key]) - 20}" if len(d[key]) > 20 else "") if d[key] else "none"))
+            skipped = d.get("failures_not_compared") if key == "new_failures" else None
+            L.append(f"- {label}: " + (", ".join(md(x) for x in d[key][:20]) + (f" … +{len(d[key]) - 20}" if len(d[key]) > 20 else "") if d[key] else "none")
+                     + (f" — Actions not compared for {len(skipped)} repositories (not read in this or the previous snapshot): {", ".join(md(x) for x in skipped[:8])}{" …" if len(skipped) > 8 else ""}" if skipped else ""))
         L.append("- _Only currently open issues/PRs are collected: an item opened and closed between two snapshots is never seen, and this report does not give daily push or merge counts._")
     L += ["", "---", f"_Scope: owner `{owner}` only; forks are counted but not analysed. Nothing was written to GitHub._", ""]
     return "\n".join(L)

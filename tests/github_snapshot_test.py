@@ -531,6 +531,42 @@ def main():
         finally:
             bs.shutdown()
 
+        # ---- 19c. TASK-122: "New Actions failures" must only compare repositories checked in BOTH snapshots
+        def fday(cfg_, n, max_calls=None):
+            cfg_.now = lambda: NOW + dt.timedelta(days=n)
+            if max_calls is not None:
+                cfg_.max_calls = max_calls
+            gs.run("moruku36", cfg_)
+            return read(os.path.join(cfg_.report_dir, f"github-daily-{(NOW + dt.timedelta(days=n)).strftime('%Y-%m-%d')}.md")).split("## 7.")[1]
+
+        # a) yesterday's Actions pass stopped before beta (budget 5 = list 2 + searches 2 + alpha 1); today everything is read.
+        #    beta's two failures existed yesterday too: they are NOT new.
+        W.reset()
+        cfg = mkcfg(gh_url, km_url)
+        fday(cfg, 0, max_calls=5)
+        d_a = fday(cfg, 1, max_calls=45)
+        check("Actions: failures of a repository NOT checked yesterday are not called new", "New Actions failures: beta: CI #900" not in d_a and "#899" not in d_a.split("New Actions failures")[1].split("\n")[0], d_a)
+        check("Actions: ... and the line says which repositories could not be compared", "not compared" in d_a.split("New Actions failures")[1].split("\n")[0] and "beta" in d_a.split("New Actions failures")[1].split("\n")[0], d_a)
+        # b) the next day (both days fully read) a genuinely new failure IS reported, and nothing is 'not compared'
+        W.runs["beta"].insert(0, W.run(902, "failure", 0))
+        d_b = fday(cfg, 2)
+        line_b = d_b.split("New Actions failures")[1].split("\n")[0]
+        check("Actions: both days complete -> new failure reported, no 'not compared'", "#902" in line_b and "not compared" not in line_b, line_b)
+        # c) today's pass stops before beta although beta failed again: 'none' would be a false all-clear
+        W.runs["beta"].insert(0, W.run(903, "failure", 0))
+        d_c = fday(cfg, 3, max_calls=5)
+        line_c = d_c.split("New Actions failures")[1].split("\n")[0]
+        check("Actions: today's pass did not reach beta -> never a bare 'none'; says beta was not compared", "not compared" in line_c and "beta" in line_c, line_c)
+        # d) a repository that became active since yesterday (not eligible then) is still reported as new, as before
+        W.reset()
+        cfg = mkcfg(gh_url, km_url)
+        W.repos[1]["pushed_at"] = iso(60)                              # beta inactive on day 0 -> not eligible for per-repository checks
+        fday(cfg, 0)
+        W.repos[1]["pushed_at"] = iso(0.1, NOW + dt.timedelta(days=1))   # active again on day 1 (age exactly 0 is read as "unknown" by age_days)
+        d_d = fday(cfg, 1)
+        line_d = d_d.split("New Actions failures")[1].split("\n")[0]
+        check("Actions: newly eligible repository's failures are reported (behaviour unchanged), with no 'not compared'", "beta: CI #900" in line_d and "not compared" not in line_d, line_d)
+
         # ---- 20. TASK-122: a same-day poorer re-run exposes the KEPT snapshot's collection flags (not its own)
         W.reset()
         cfg = mkcfg(gh_url, km_url)
