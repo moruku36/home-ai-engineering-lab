@@ -1,0 +1,235 @@
+{
+  "id": "SecurityLogAnalysis01",
+  "name": "Security Log Analysis (Local AI - Inactive Proposal)",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "cronExpression",
+              "expression": "0 6 * * *"
+            }
+          ]
+        }
+      },
+      "id": "s1000000-0000-4000-8000-000000000001",
+      "name": "Daily 06:00 UTC",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, -80]
+    },
+    {
+      "parameters": {},
+      "id": "s1000000-0000-4000-8000-000000000002",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [0, 100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://python-jobs:8080/jobs/security-log-preprocess",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"source\": \"syslog\",\n  \"scope\": [\"sshd\", \"docker\", \"ufw\", \"auth\"]\n}",
+        "options": {
+          "timeout": 60000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "s1000000-0000-4000-8000-000000000003",
+      "name": "Preprocess & Deterministic Rules",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 10],
+      "retryOnFail": true,
+      "maxTries": 2,
+      "waitBetweenTries": 3000
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-pre-ok",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "SUCCESS",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "s1000000-0000-4000-8000-000000000004",
+      "name": "Preprocess OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [460, 10]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://python-jobs:8080/jobs/security-llm-reference-analysis",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"preprocessed_job_id\": $json.job_id,\n  \"single_inference\": true,\n  \"timeout_seconds\": 120\n}",
+        "options": {
+          "timeout": 130000,
+          "response": {
+            "response": {
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "s1000000-0000-4000-8000-000000000005",
+      "name": "Call Local LLM Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [680, -60],
+      "retryOnFail": false
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "cond-llm-ok",
+              "leftValue": "={{ $json.status }}",
+              "rightValue": "SUCCESS",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        }
+      },
+      "id": "s1000000-0000-4000-8000-000000000006",
+      "name": "LLM OK?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [900, -60]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://python-jobs:8080/jobs/security-publish-report",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"report_type\": \"full_with_llm\",\n  \"data\": $json\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "s1000000-0000-4000-8000-000000000007",
+      "name": "Publish Full Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, -120]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://python-jobs:8080/jobs/security-publish-report",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"report_type\": \"deterministic_only_llm_deferred\",\n  \"reason\": \"Windows host or Ollama service unreachable / timeout\"\n}",
+        "options": {
+          "timeout": 30000
+        }
+      },
+      "id": "s1000000-0000-4000-8000-000000000008",
+      "name": "Publish Deterministic Fallback Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1120, 40]
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "set-pre-err",
+              "name": "error",
+              "value": "Preprocess stage failed or returned non-success",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "id": "s1000000-0000-4000-8000-000000000009",
+      "name": "Preprocess Failure Log",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [680, 140]
+    }
+  ],
+  "connections": {
+    "Daily 06:00 UTC": {
+      "main": [
+        [{ "node": "Preprocess & Deterministic Rules", "type": "main", "index": 0 }]
+      ]
+    },
+    "Manual Trigger": {
+      "main": [
+        [{ "node": "Preprocess & Deterministic Rules", "type": "main", "index": 0 }]
+      ]
+    },
+    "Preprocess & Deterministic Rules": {
+      "main": [
+        [{ "node": "Preprocess OK?", "type": "main", "index": 0 }]
+      ]
+    },
+    "Preprocess OK?": {
+      "main": [
+        [{ "node": "Call Local LLM Analysis", "type": "main", "index": 0 }],
+        [{ "node": "Preprocess Failure Log", "type": "main", "index": 0 }]
+      ]
+    },
+    "Call Local LLM Analysis": {
+      "main": [
+        [{ "node": "LLM OK?", "type": "main", "index": 0 }]
+      ]
+    },
+    "LLM OK?": {
+      "main": [
+        [{ "node": "Publish Full Report", "type": "main", "index": 0 }],
+        [{ "node": "Publish Deterministic Fallback Report", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1",
+    "timezone": "Asia/Tokyo"
+  },
+  "active": false
+}

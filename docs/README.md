@@ -17,6 +17,15 @@ English first, Japanese second. "Language" tells you what the document is writte
 | [playground.md](playground.md) | EN + JA | OSS playground: Prometheus, Grafana, Kubernetes (kind) / OSSプレイグラウンド |
 | [playground-kyverno-design.md](playground-kyverno-design.md) | EN + JA | Design for adding Kyverno (not implemented) / Kyverno追加の設計（未実装） |
 
+## Planning & Inactive designs / 計画・提案段階の設計
+
+| Doc | Language | About / 内容 |
+|---|---|---|
+| [local-gpu-security-analysis-design.md](local-gpu-security-analysis-design.md) | JA + EN | Local GPU AI security log analysis architecture and security boundaries / ローカルGPU AI セキュリティログ解析の設計と境界 |
+| [local-gpu-deployment-guide.md](local-gpu-deployment-guide.md) | JA + EN | Inactive deployment guide, tunnel setup, and deployment gates / デプロイ手順案・トンネル設計・承認ゲート |
+| [local-gpu-ops-runbook.md](local-gpu-ops-runbook.md) | JA + EN | Operations runbook, handling Windows offline, human triage / 運用手順書・Windows停止時対応・トリアージ |
+| [local-gpu-benchmark-results.md](local-gpu-benchmark-results.md) | JA + EN | Unmeasured status, confirmed specs, and future benchmark protocol / ベンチマーク結果（未測定）と測定プロトコル案 |
+
 ## Operations (current) / 運用（最新）
 
 | Doc | Language | About / 内容 |

@@ -5,6 +5,10 @@ Network visibility: [Phase 1–4 overview / 家庭ネットワーク可視化の
 NUC metrics + owner-approved device inventory + a limited DNS trial; Phase 3 IDS and Phase 4 blocking are future work.
 Implementation, offline tests and approval-dependent deployment: [Phase 1・2 runbook](docs/network-visibility-runbook.md).
 
+Local GPU AI security log analysis: [Phase 0 survey & Phase 1 design / 設計仕様](docs/local-gpu-security-analysis-design.md).
+**Phase 1 design and offline mock validation in progress; no live deployment or GPU inference.**
+Architecture, security boundaries, JSON Schema, inactive workflows, and unmeasured benchmark protocol: [Design](docs/local-gpu-security-analysis-design.md) · [Deployment Guide](docs/local-gpu-deployment-guide.md) · [Ops Runbook](docs/local-gpu-ops-runbook.md) · [Benchmark Results](docs/local-gpu-benchmark-results.md).
+
 **English** | [日本語](#日本語)
 
 > **Status (2026-10-15):** An always-on, **zero-extra-cost** automation and monitoring box. Open WebUI is **stopped on purpose** (data kept). A daily GitHub report is generated; **notifications are not delivered yet** (no channel configured), the **first scheduled run is not yet observed**, and **off-device backup is still missing**. See [What is *not* verified](#what-is-not-verified-yet).
@@ -162,6 +166,7 @@ The lab is also a **playground for open-source products**: run them, write down 
 | [docs/security-operations.md](docs/security-operations.md) | Security controls and credential handling |
 | [docs/playground.md](docs/playground.md) | OSS playground: Prometheus, Grafana, Kubernetes (kind), rules for testing |
 | [docs/mcp-internal-api.md](docs/mcp-internal-api.md) | MCP server design and verification |
+| [docs/local-gpu-security-analysis-design.md](docs/local-gpu-security-analysis-design.md) | Local GPU AI security log analysis architecture and Phase 1 design (inactive proposal) |
 | [docs/build-progress.md](docs/build-progress.md) | Checklist, final report, incidents |
 | [docs/README.md](docs/README.md) | Index of all docs (current / historical) |
 
