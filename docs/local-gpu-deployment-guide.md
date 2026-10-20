@@ -1,7 +1,7 @@
 # Local GPU AI Security Log Analysis — Deployment Guide (Draft Proposal)
 # ローカルGPU AI セキュリティログ解析 デプロイ手順案（未実施・提案段階）
 
-**Status: Draft / Inactive Proposal / 未適用・提案段階**  
+**Status: Draft / Inactive Proposal / 未適用・提案段階**\
 **Warning: 実機への適用、ポート開放、サービスの再起動・停止は本フェーズでは禁止されています。**
 
 ---
@@ -31,7 +31,7 @@ Ollama はデフォルトで認証機構を持たないため、**Ollamaのポ�
 NUC から Windows への暗号化トンネルを経由して通信します。
 
 ```
-[NUC Docker Container] ──> [NUC Host (127.0.0.1:11434)] 
+[NUC Docker Container] ──> [NUC Host (127.0.0.1:11434)]
                              │ (SSH Local Forward via 鍵認証)
                              ▼
                            [Windows Host (127.0.0.1:11434)] ──> [Ollama Daemon]

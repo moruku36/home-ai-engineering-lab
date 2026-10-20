@@ -1,7 +1,7 @@
 # Local GPU AI Security Log Analysis — Operations Runbook
 # ローカルGPU AI セキュリティログ解析 運用手順書（Runbook）
 
-**Status: Phase 1 Specification / 運用仕様書**  
+**Status: Phase 1 Specification / 運用仕様書**\
 **Role: Human Administrator & On-call / 運用管理者向け手順**
 
 ---
@@ -47,16 +47,16 @@ flowchart TD
   RPT["セキュリティレポート確認"] --> CHK{"needs_human_review: true ?"}
   CHK -- No --> LOG["ログ保存・経過観察"]
   CHK -- Yes --> SEV{"Severity レベル"}
-  
+
   SEV -- "high / critical<br/>(SSH攻撃・インジェクション)" --> AUDIT["1. Evidence Refs (証拠行) の生ログ突き合わせ<br/>2. UFW状態・SSH設定確認<br/>3. 必要に応じてIP手動遮断 (管理者が手動実行)"]
   SEV -- "medium / low<br/>(sudo失敗・不審アクセス)" --> USER["担当ユーザーへのヒアリング<br/>誤入力の確認"]
-  
+
   AUDIT --> DOC["調査結果をチケット/記録に残す"]
   USER --> DOC
 ```
 
 > [!CAUTION]
-> **本パイプラインには OS 操作権限やファイアウォール変更権限はありません。**  
+> **本パイプラインには OS 操作権限やファイアウォール変更権限はありません。**\
 > いかなる遮断措置やシステム変更も、管理者が SSH 経由で手動検証した上で実行してください。
 
 ---

@@ -1,8 +1,8 @@
 # Local GPU AI Security Log Analysis — Architecture & Security Design
 # ローカルGPU AI セキュリティログ解析 アーキテクチャおよびセキュリティ設計
 
-**Status: Phase 1 Inactive Design & Offline Mock Validation / 計画・オフラインモック検証中（未デプロイ・推論未実行）**  
-**Date:** 2026-10-19  
+**Status: Phase 1 Inactive Design & Offline Mock Validation / 計画・オフラインモック検証中（未デプロイ・推論未実行）**\
+**Date:** 2026-10-19\
 **Target Repository:** `moruku36/home-ai-engineering-lab` (Phase 1 isolated branch: `feat/local-gpu-security-analysis-phase1`)
 
 ---
@@ -46,7 +46,7 @@ flowchart TD
   subgraph NUC["Intel NUC (Ubuntu Server 24.04 - 常に稼働)"]
     direction TB
     LOGS["ホスト & コンテナ ログ<br/>(/var/log/syslog, auth, docker)"]
-    
+
     subgraph Pipeline["Security Log Pipeline (Python Worker)"]
       PRE["1. UTC正規化<br/>(ISO 8601 UTC)"]
       RED["2. 秘密・個人情報マスク<br/>(トークン/パスワード/鍵/IP)"]
@@ -55,18 +55,18 @@ flowchart TD
       CHUNK["5. Bounded 分割<br/>(最大100行/8000文字)"]
       VAL["6. 厳格検証<br/>(JSON Schema + 偽証拠拒否)"]
     end
-    
+
     LOGS --> PRE --> RED --> RULE --> DEDUP --> CHUNK
-    
+
     subgraph QueueControl["推論制御・フォールバック"]
       QUEUE["単一推論キュー (Concurrency=1)<br/>タイムアウト 120s / リトライ 2回"]
       FALLBACK["Windows停止時フォールバック<br/>(LLM保留 + ルール検知レポートのみ生成)"]
     end
-    
+
     CHUNK --> QUEUE
     QUEUE -. "Windows稼働時" .-> TUNNEL
     QUEUE -. "Windows停止/Timeout時" .-> FALLBACK --> REPORT
-    
+
     REPORT[("セキュリティ評価レポート<br/>Markdown & JSON<br/>(volume: security-reports)")]
     VAL --> REPORT
   end
@@ -137,13 +137,13 @@ LLMの推論結果に依存せず、確実・再現可能に異常を検知す�
 ## 5. ネットワークと認証設計（設計のみ・未配備）
 
 ```
-[Intel NUC: Docker internal-net] 
-       │ 
+[Intel NUC: Docker internal-net]
+       │
        ▼
 [python-jobs / security-pipeline] (Bearer JOBS_TOKEN 認証)
        │
        ▼ (127.0.0.1:11434 へのSSHローカル転送 または 相互TLSプロキシ)
-[Windows PC] 
+[Windows PC]
        │ (127.0.0.1 のみリッスン)
 [Ollama Daemon]
 ```
@@ -162,3 +162,12 @@ LLMの推論結果に依存せず、確実・再現可能に異常を検知す�
 | **セキュリティログ拒否率** | 攻撃文字列（インジェクションやExploit文字列）を含むログに対する不必要なRefusal（拒否）が起きにくいと期待。 | 安全性ガードレールにより、攻撃ログの要約を「有害コンテンツ」と判定して回答拒否するリスクを検証。 |
 | **JSON Schema準拠性** | Abliteration（安全性除去）によってフォーマット追従性や文脈理解に劣化が生じていないかを測定。 | 標準モデルのベース構造化出力精度との差分を比較。 |
 | **実施条件** | — | **※現在はモデルのダウンロードおよび負荷試験は禁止。Phase 2以降の承認後に実施。** |
+
+
+## Offline validation implementation notes
+
+- The stdlib validator reads the declared event schema and checks its supported assertion keywords recursively, including nested evidence. Unknown keywords fail closed. High/critical and prompt-injection findings with review disabled are rejected; every accepted LLM finding is marked for human review.
+- Evidence supplied by the model must refer to the chunk it received. Rejection warnings do not echo untrusted model content.
+- A redacted entry longer than 8,000 characters defers the LLM stage for the batch. The complete entry and its hash remain available to deterministic rules and evidence validation; no evidence is silently truncated.
+- PEM private-key redaction spans input entries and masks an unterminated block through the end of the batch. Entry numbers remain tied to the original input positions. Bare API and age key shapes are masked before hashing or LLM invocation.
+- These are offline guarantees only. The proposed workflow/Compose files remain inactive; live API wiring, ingestion bounds, inference timeouts/retries, and deployment acceptance remain Phase 2 work.

@@ -3,11 +3,16 @@
 English first, Japanese second. "Language" tells you what the document is written in.
 英語が先、日本語が後。「言語」はその文書の記述言語です。
 
+[English overview](../README.md) · [日本語の概要](../README.ja.md)
+
+README pages are separate; topic guides retain their existing languages.
+READMEは言語別ページです。詳細資料は各資料の既存の言語で記載しています。
+
 ## Start here / まずここから
 
 | Doc | Language | About / 内容 |
 |---|---|---|
-| [../README.md](../README.md) | EN + JA | What the lab is, what it can do, architecture, status / 全体像・できること・構成図・状態 |
+| [English README](../README.md) · [日本語 README](../README.ja.md) | EN / JA | What the lab is, what it can do, architecture, status / 全体像・できること・構成図・状態 |
 | [use-cases.md](use-cases.md) | EN + JA | Use cases with verified status / 用途と検証状態 |
 | [architecture.md](architecture.md) | EN + JA | System, network, data-flow and backup diagrams / 各種構成図 |
 | [github-monitoring.md](github-monitoring.md) | EN + JA | The daily GitHub report: scope, API budget, token, alerts / GitHub日次レポート |
@@ -26,12 +31,19 @@ English first, Japanese second. "Language" tells you what the document is writte
 | [local-gpu-ops-runbook.md](local-gpu-ops-runbook.md) | JA + EN | Operations runbook, handling Windows offline, human triage / 運用手順書・Windows停止時対応・トリアージ |
 | [local-gpu-benchmark-results.md](local-gpu-benchmark-results.md) | JA + EN | Unmeasured status, confirmed specs, and future benchmark protocol / ベンチマーク結果（未測定）と測定プロトコル案 |
 
+## Network visibility / 家庭ネットワーク可視化
+
+| Doc | Language | About / 内容 |
+|---|---|---|
+| [network-visibility.md](network-visibility.md) | EN + JA | Phase 1–4 scope; Phase 1–2 implementation in progress / 概要・実装中の範囲 |
+| [network-visibility-runbook.md](network-visibility-runbook.md) | JA | Implementation, offline verification and approval-dependent deployment; live display unverified / 実装・検証・適用手順（実機表示は未検証） |
+
 ## Operations (current) / 運用（最新）
 
 | Doc | Language | About / 内容 |
 |---|---|---|
 | [security-operations.md](security-operations.md) | JA | Security controls, credential handling, what to do if a secret leaks / セキュリティ運用・漏えい時の対応 |
-| [security-analysis-vm.md](security-analysis-vm.md) | JA | Dedicated security analysis VM design and phases / 専用セキュリティ解析VMの設計と段階 |
+| [security-analysis-vm.md](security-analysis-vm.md) | JA | Current VM architecture, limited results and acceptance boundaries / VMの現在構成・限定試験結果・受入れ範囲（A条件付き受入れ、B未受入れ） |
 | [ai-api-key-management.md](ai-api-key-management.md) | JA | Storing / rotating LLM API keys, cost limits. **Open WebUI is stopped, so this is parked** / APIキー管理（Open WebUI停止中のため保留） |
 | [mcp-internal-api.md](mcp-internal-api.md) | JA | MCP server design, controls, verification / MCPの設計・制御・検証 |
 | [backup-restore.md](backup-restore.md) | JA | Backup, restore test, recovery / バックアップ・復元・復旧 |
@@ -53,6 +65,9 @@ English first, Japanese second. "Language" tells you what the document is writte
 ## Samples / サンプル
 
 - [samples/github-daily-sample.md](samples/github-daily-sample.md) — a **synthetic** daily GitHub report (fake data) / 合成データの日次レポート例
+
+Topic-specific updates take precedence over older build records; implementation is not deployment verification.
+各テーマの新しい記録を過去の構築記録より優先し、実装済みと実機検証済みを区別します。
 
 ## Rules for documents / 文書のルール
 

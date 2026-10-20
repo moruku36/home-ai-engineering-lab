@@ -12,15 +12,17 @@ import hashlib
 import json
 import re
 from datetime import datetime, timezone
+from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 
 # Patterns for secret and PII redaction
 TOKEN_PATTERNS = [
+    (re.compile(r"\bsk-[A-Za-z0-9_-]+"), "[REDACTED_API_KEY]"),
+    (re.compile(r"AGE-SECRET-KEY-[A-Za-z0-9]+", re.IGNORECASE), "[REDACTED_AGE_KEY]"),
     # High-entropy API tokens / passwords / bearer strings
     (re.compile(r"Bearer\s+[A-Za-z0-9._~+/=-]{16,}", re.IGNORECASE), "Bearer [REDACTED_TOKEN]"),
     (re.compile(r"(password|passwd|pwd|secret|api[_-]?key)\s*[:=]\s*['\"]?[^\s'\"]{6,}['\"]?", re.IGNORECASE), r"\1=[REDACTED_SECRET]"),
     (re.compile(r"gh[pousr]_[A-Za-z0-9]{20,}", re.IGNORECASE), "[REDACTED_GITHUB_TOKEN]"),
-    (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----"), "[REDACTED_PRIVATE_KEY]"),
     (re.compile(r"ssh-(?:ed25519|rsa)\s+AAAA[0-9A-Za-z+/]{20,}", re.IGNORECASE), "[REDACTED_SSH_KEY]"),
     # Email addresses
     (re.compile(r"\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b"), "[REDACTED_EMAIL]"),
@@ -59,11 +61,11 @@ class EvidenceValidationError(SecurityPipelineError):
 
 def normalize_utc(timestamp_str: str, default_year: int = 2026) -> str:
     """Normalize various log timestamp formats (syslog BSD, ISO 8601, Docker) to ISO 8601 UTC string.
-    
+
     Returns standard string like '2026-10-19T03:14:00Z'.
     """
     cleaned = timestamp_str.strip()
-    
+
     # 1. ISO 8601 format (e.g., 2026-10-19T03:14:00.123456Z or +09:00)
     if "T" in cleaned:
         iso_candidate = cleaned.replace("Z", "+00:00")
@@ -100,25 +102,44 @@ def normalize_utc(timestamp_str: str, default_year: int = 2026) -> str:
     return f"{default_year}-01-01T00:00:00Z"
 
 
+def _redact_lines(lines: List[str]) -> List[str]:
+    """Keep input entry boundaries while masking complete or truncated PEM blocks."""
+    in_private_key = False
+    result = []
+    for text in lines:
+        parts = []
+        for line in text.splitlines(keepends=True):
+            begins = re.search(r"-----BEGIN [A-Z ]*PRIVATE KEY-----", line)
+            ends = re.search(r"-----END [A-Z ]*PRIVATE KEY-----", line)
+            if in_private_key or begins:
+                ending = "\r\n" if line.endswith("\r\n") else "\n" if line.endswith("\n") else ""
+                parts.append("[REDACTED_PRIVATE_KEY]" + ending)
+                in_private_key = not bool(ends)
+            else:
+                redacted = line
+                for pattern, replacement in TOKEN_PATTERNS:
+                    redacted = pattern.sub(replacement, redacted)
+                parts.append(redacted)
+        result.append("".join(parts))
+    return result
+
+
 def redact_sensitive_data(text: str) -> str:
     """Mask tokens, secrets, private IP ranges, passwords, and private keys."""
-    redacted = text
-    for pattern, replacement in TOKEN_PATTERNS:
-        redacted = pattern.sub(replacement, redacted)
-    return redacted
+    return _redact_lines([text])[0]
 
 
 def parse_and_preprocess_logs(raw_lines: List[str], source: str = "syslog") -> List[Dict[str, Any]]:
     """Parse raw log lines, normalize timestamps, redact secrets, and compute stable 8-char hashes."""
     preprocessed = []
-    for idx, raw_line in enumerate(raw_lines, start=1):
+    for idx, raw_line in enumerate(_redact_lines(raw_lines), start=1):
         line = raw_line.rstrip("\r\n")
         if not line:
             continue
-        
-        redacted = redact_sensitive_data(line)
+
+        redacted = line
         line_hash = hashlib.sha256(redacted.encode("utf-8")).hexdigest()[:8]
-        
+
         # Extract timestamp prefix if present
         first_token = line.split()[0] if line.split() else ""
         if len(line.split()) >= 3 and line[:3] in ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]:
@@ -141,11 +162,11 @@ def parse_and_preprocess_logs(raw_lines: List[str], source: str = "syslog") -> L
 
 def detect_deterministic_rules(entries: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """Execute signature and rule-based anomaly detection before any LLM is called.
-    
+
     Guarantees deterministic, reproducible detection of high-risk patterns.
     """
     findings: List[Dict[str, Any]] = []
-    
+
     # 1. SSH Auth Failures
     ssh_failures: Dict[str, List[Dict[str, Any]]] = {}
     for entry in entries:
@@ -255,19 +276,24 @@ def deduplicate_events(events: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
 
 def chunk_log_entries(entries: List[Dict[str, Any]], max_lines: int = 100, max_chars: int = 8000) -> List[List[Dict[str, Any]]]:
     """Split preprocessed log entries into bounded chunks to respect LLM context limits."""
+    if type(max_lines) is not int or type(max_chars) is not int or max_lines <= 0 or max_chars <= 0:
+        raise ValueError("Chunk limits must be positive integers")
     chunks: List[List[Dict[str, Any]]] = []
     current_chunk: List[Dict[str, Any]] = []
     current_chars = 0
-    
+
     for entry in entries:
         line_len = len(entry["content"])
+        if line_len > max_chars:
+            # Preserve the full entry and its hash for rules/evidence; defer LLM.
+            raise ValueError("Log entry exceeds LLM chunk character limit")
         if len(current_chunk) >= max_lines or (current_chars + line_len > max_chars and current_chunk):
             chunks.append(current_chunk)
             current_chunk = []
             current_chars = 0
         current_chunk.append(entry)
         current_chars += line_len
-        
+
     if current_chunk:
         chunks.append(current_chunk)
     return chunks
@@ -275,7 +301,7 @@ def chunk_log_entries(entries: List[Dict[str, Any]], max_lines: int = 100, max_c
 
 def validate_evidence(event: Dict[str, Any], entries_by_line: Dict[int, Dict[str, Any]]) -> bool:
     """Strictly verify that every evidence reference in the event maps to real preprocessed log entries.
-    
+
     Rejects hallucinated or invented evidence citations.
     """
     refs = event.get("evidence_refs", [])
@@ -286,62 +312,91 @@ def validate_evidence(event: Dict[str, Any], entries_by_line: Dict[int, Dict[str
         line_no = ref.get("line_no")
         raw_hash = ref.get("raw_hash")
         log_excerpt = ref.get("log_excerpt", "")
-        
+
         if line_no not in entries_by_line:
             raise EvidenceValidationError(
                 f"Evidence citation failure: line {line_no} does not exist in input log chunk"
             )
-        
+
         real_entry = entries_by_line[line_no]
         if real_entry["raw_hash"] != raw_hash:
             raise EvidenceValidationError(
                 f"Evidence hash mismatch at line {line_no}: cited {raw_hash}, expected {real_entry['raw_hash']}"
             )
-        
+
         # Verify excerpt is a substring of the preprocessed line
         if log_excerpt and log_excerpt not in real_entry["content"]:
             raise EvidenceValidationError(
                 f"Evidence excerpt at line {line_no} not found in actual preprocessed line content"
             )
-            
+
     return True
 
 
-def validate_schema(event: Dict[str, Any]) -> None:
-    """Validate event against required schema properties, enums, and lengths."""
-    required = [
-        "event_id", "source", "timestamp", "event_type", "severity",
-        "summary", "evidence_refs", "suspected_cause", "recommended_actions",
-        "needs_human_review"
-    ]
-    for req in required:
-        if req not in event:
-            raise ValueError(f"Schema violation: missing required property '{req}'")
+EVENT_SCHEMA = json.loads(
+    (Path(__file__).resolve().parents[1] / "schemas" / "security-analysis-event.schema.json").read_text(encoding="utf-8")
+)
 
-    valid_sources = {"syslog", "docker", "sshd", "n8n", "ufw", "auth", "synthetic_test"}
-    if event["source"] not in valid_sources:
-        raise ValueError(f"Schema violation: invalid source '{event['source']}'")
 
-    valid_types = {
-        "auth_bruteforce", "sudo_failure", "privilege_escalation_attempt",
-        "unauthorized_access", "container_anomaly", "prompt_injection_attempt",
-        "network_scan", "generic_anomaly"
+def _validate_schema_value(value: Any, schema: Dict[str, Any], path: str) -> None:
+    """Evaluate the assertion keywords used by the repository's event schema.
+
+    This is deliberately a small stdlib validator, not a general JSON Schema engine.
+    Unknown keywords fail closed so schema changes cannot silently weaken validation.
+    """
+    supported = {
+        "$schema", "title", "description", "type", "required", "additionalProperties",
+        "properties", "enum", "pattern", "format", "minLength", "maxLength",
+        "minItems", "items", "minimum",
     }
-    if event["event_type"] not in valid_types:
-        raise ValueError(f"Schema violation: invalid event_type '{event['event_type']}'")
+    if set(schema) - supported:
+        raise ValueError("Schema violation: unsupported schema keyword")
+    expected = schema["type"]
+    types = {"object": dict, "array": list, "string": str, "integer": int, "boolean": bool}
+    if expected not in types or type(value) is not types[expected]:
+        raise ValueError(f"Schema violation at {path}: expected {expected}")
+    if "enum" in schema and value not in schema["enum"]:
+        raise ValueError(f"Schema violation at {path}: invalid enum value")
+    if expected == "object":
+        props = schema.get("properties", {})
+        if any(key not in value for key in schema.get("required", [])):
+            raise ValueError(f"Schema violation at {path}: missing required property")
+        if schema.get("additionalProperties") is False and set(value) - set(props):
+            raise ValueError(f"Schema violation at {path}: additional property")
+        for key, child in value.items():
+            if key in props:
+                _validate_schema_value(child, props[key], f"{path}.{key}")
+    elif expected == "array":
+        if len(value) < schema.get("minItems", 0):
+            raise ValueError(f"Schema violation at {path}: too few items")
+        for item in value:
+            _validate_schema_value(item, schema["items"], f"{path}[]")
+    elif expected == "string":
+        if len(value) < schema.get("minLength", 0) or len(value) > schema.get("maxLength", len(value)):
+            raise ValueError(f"Schema violation at {path}: string length out of bounds")
+        if "pattern" in schema and re.fullmatch(schema["pattern"], value) is None:
+            raise ValueError(f"Schema violation at {path}: invalid string pattern")
+        if "format" in schema:
+            if schema["format"] != "date-time":
+                raise ValueError("Schema violation: unsupported string format")
+            # RFC 3339 shape plus calendar/time validation; no naive timestamps.
+            if re.fullmatch(r"[0-9]{4}-[0-9]{2}-[0-9]{2}[Tt][0-9]{2}:[0-9]{2}:[0-9]{2}(?:\.[0-9]+)?(?:[Zz]|[+-][0-9]{2}:[0-9]{2})", value) is None:
+                raise ValueError(f"Schema violation at {path}: invalid date-time")
+            if value[-1:] not in {"Z", "z"} and (int(value[-5:-3]) > 23 or int(value[-2:]) > 59):
+                raise ValueError(f"Schema violation at {path}: invalid timezone offset")
+            try:
+                datetime.fromisoformat(value.upper().replace("Z", "+00:00"))
+            except ValueError:
+                raise ValueError(f"Schema violation at {path}: invalid date-time") from None
+    elif expected == "integer" and value < schema.get("minimum", value):
+        raise ValueError(f"Schema violation at {path}: below minimum")
 
-    valid_severities = {"info", "low", "medium", "high", "critical"}
-    if event["severity"] not in valid_severities:
-        raise ValueError(f"Schema violation: invalid severity '{event['severity']}'")
 
-    if not (10 <= len(event["summary"]) <= 300):
-        raise ValueError(f"Schema violation: summary length {len(event['summary'])} out of bounds (10-300)")
-
-    if not isinstance(event["needs_human_review"], bool):
-        raise ValueError("Schema violation: needs_human_review must be boolean")
-
-    if not isinstance(event["recommended_actions"], list) or len(event["recommended_actions"]) == 0:
-        raise ValueError("Schema violation: recommended_actions must be non-empty array")
+def validate_schema(event: Dict[str, Any]) -> None:
+    """Validate every declared structural constraint and required review policy."""
+    _validate_schema_value(event, EVENT_SCHEMA, "event")
+    if (event["severity"] in {"high", "critical"} or event["event_type"] == "prompt_injection_attempt") and not event["needs_human_review"]:
+        raise ValueError("Schema violation: this finding requires human review")
 
 
 def process_pipeline(
@@ -377,11 +432,12 @@ def process_pipeline(
                 for res in raw_llm_results:
                     try:
                         validate_schema(res)
-                        validate_evidence(res, entries_by_line)
-                        llm_findings.append(res)
-                    except (ValueError, EvidenceValidationError) as err:
+                        validate_evidence(res, {e["line_no"]: e for e in chunk})
+                        # Model output cannot waive human review, at any severity.
+                        llm_findings.append({**res, "needs_human_review": True})
+                    except (ValueError, EvidenceValidationError):
                         # Log and reject hallucinated/invalid model finding
-                        print(f"[WARN] Rejected invalid LLM finding: {err}")
+                        print("[WARN] Rejected invalid LLM finding")
             llm_status = "SUCCESS"
         except Exception as e:
             # Graceful degradation: Windows Ollama offline / timeout
@@ -414,7 +470,7 @@ def render_markdown_report(result: Dict[str, Any]) -> str:
         "## Detected Security Events",
         ""
     ]
-    
+
     findings = result.get("findings", [])
     if not findings:
         lines.append("No security anomalies or rule violations detected.")
