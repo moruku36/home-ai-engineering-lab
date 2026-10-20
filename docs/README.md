@@ -3,11 +3,16 @@
 English first, Japanese second. "Language" tells you what the document is written in.
 英語が先、日本語が後。「言語」はその文書の記述言語です。
 
+[English overview](../README.md) · [日本語の概要](../README.ja.md)
+
+README pages are separate; topic guides retain their existing languages.
+READMEは言語別ページです。詳細資料は各資料の既存の言語で記載しています。
+
 ## Start here / まずここから
 
 | Doc | Language | About / 内容 |
 |---|---|---|
-| [../README.md](../README.md) | EN + JA | What the lab is, what it can do, architecture, status / 全体像・できること・構成図・状態 |
+| [English README](../README.md) · [日本語 README](../README.ja.md) | EN / JA | What the lab is, what it can do, architecture, status / 全体像・できること・構成図・状態 |
 | [use-cases.md](use-cases.md) | EN + JA | Use cases with verified status / 用途と検証状態 |
 | [architecture.md](architecture.md) | EN + JA | System, network, data-flow and backup diagrams / 各種構成図 |
 | [github-monitoring.md](github-monitoring.md) | EN + JA | The daily GitHub report: scope, API budget, token, alerts / GitHub日次レポート |
@@ -16,6 +21,13 @@ English first, Japanese second. "Language" tells you what the document is writte
 | [offsite-backup-options.md](offsite-backup-options.md) | EN + JA | Off-device backup options (no decision made) / NUC外バックアップの選択肢 |
 | [playground.md](playground.md) | EN + JA | OSS playground: Prometheus, Grafana, Kubernetes (kind) / OSSプレイグラウンド |
 | [playground-kyverno-design.md](playground-kyverno-design.md) | EN + JA | Design for adding Kyverno (not implemented) / Kyverno追加の設計（未実装） |
+
+## Network visibility / 家庭ネットワーク可視化
+
+| Doc | Language | About / 内容 |
+|---|---|---|
+| [network-visibility.md](network-visibility.md) | EN + JA | Phase 1–4 scope; Phase 1–2 implementation in progress / 概要・実装中の範囲 |
+| [network-visibility-runbook.md](network-visibility-runbook.md) | JA | Implementation, offline verification and approval-dependent deployment; live display unverified / 実装・検証・適用手順（実機表示は未検証） |
 
 ## Operations (current) / 運用（最新）
 
@@ -44,6 +56,9 @@ English first, Japanese second. "Language" tells you what the document is writte
 ## Samples / サンプル
 
 - [samples/github-daily-sample.md](samples/github-daily-sample.md) — a **synthetic** daily GitHub report (fake data) / 合成データの日次レポート例
+
+Topic-specific updates take precedence over older build records; implementation is not deployment verification.
+各テーマの新しい記録を過去の構築記録より優先し、実装済みと実機検証済みを区別します。
 
 ## Rules for documents / 文書のルール
 
