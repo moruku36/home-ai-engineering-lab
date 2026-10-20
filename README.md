@@ -5,6 +5,8 @@ Network visibility: [Phase 1–4 overview / 家庭ネットワーク可視化の
 NUC metrics + owner-approved device inventory + a limited DNS trial; Phase 3 IDS and Phase 4 blocking are future work.
 Implementation, offline tests and approval-dependent deployment: [Phase 1・2 runbook](docs/network-visibility-runbook.md).
 
+**Security analysis VM (2026-10-20 JST):** VM foundation and limited basic operations are conditionally owner-accepted (scope A). REA → Ghidra analysis capability is not accepted (scope B); original `FAIL` / `REPORT=UNVERIFIED` results are retained, and a MiMo review limited to documentation semantics, architecture and acceptance boundaries has been completed. [Current architecture, work completed and limitations](docs/security-analysis-vm.md).
+
 **English** | [日本語](#日本語)
 
 > **Status (2026-10-15):** An always-on, **zero-extra-cost** automation and monitoring box. Open WebUI is **stopped on purpose** (data kept). A daily GitHub report is generated; **notifications are not delivered yet** (no channel configured), the **first scheduled run is not yet observed**, and **off-device backup is still missing**. See [What is *not* verified](#what-is-not-verified-yet).
@@ -179,6 +181,8 @@ License: documentation-first prototype; license TBD.
 
 ## 日本語
 
+**専用セキュリティ解析VM（2026-10-20 JST）:** VM基盤・限定的な基本操作は条件付きオーナー受入れ（スコープA）。REA → Ghidra の解析能力は未受入れ（スコープB）で、元の `FAIL` / `REPORT=UNVERIFIED` を保持しています。文書の意味・構成・受入れ範囲に限定したMiMoレビューを実施済みです。[現在の構成・実施内容・限界](docs/security-analysis-vm.md)。
+
 ### これは何？
 
 自宅の Intel NUC（Ubuntu Server + Docker Compose）で動く、個人の OSS／GitHub 開発を支える**常設の自動化・監視ボックス**です。
@@ -285,3 +289,4 @@ docs/            設計・運用・進捗（索引：docs/README.md）
 5. 使わないものは動かさない。検証していないものを「完了」と書かない。
 
 ライセンス：ドキュメント中心のプロトタイプ。ライセンスは未定。
+

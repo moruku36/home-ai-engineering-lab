@@ -1,0 +1,35 @@
+flowchart TB
+  accTitle: Offline VM architecture and acceptance boundaries
+  accDescr: A terminal controls an isolated QEMU KVM guest over a host UNIX serial socket. Optional management VNC is host loopback only. The guest has no network interface or normal guest network path. Workbench and REA are separate, with their integration not implemented. Scope A is conditionally accepted; scope B is not accepted and original A4 failure is retained.
+
+  operator[Operator terminal] --> serial[Host UNIX serial socket]
+  vnc[Optional VNC management\nHost loopback only] -.-> vm
+  iso[Read-only offline ISO\nMounted noexec / nosuid / nodev] --> vm
+  serial --> vm
+
+  subgraph vm[Isolated QEMU / KVM guest]
+    direction TB
+    resources[2 vCPU · 4 GiB RAM · 20 GiB qcow2]
+    network[No guest NIC\nNo normal guest network path]
+    node[Node 22.23.3] --> workbench[Workbench MCP\nBasic SQLite + doctor\n16-tool-list smoke passed]
+    scanner[Real scanner operation not verified]
+    rea[REA 6.7.0] --> analysis[JDK 21.0.12.1 + Ghidra 12.1.4\nDiagnostic / analysis path]
+    workbench -.- future[REA / Workbench integration\nNOT implemented · separate TASK113]
+    future -.- rea
+  end
+
+  subgraph acceptance[Acceptance boundary]
+    direction LR
+    scopeA[Scope A: VM base / basic operation\nCONDITIONALLY ACCEPTED]
+    scopeB[Scope B: analysis\nNOT ACCEPTED\nOriginal A4 FAIL retained]
+    disclaimer[No production-safety claim]
+  end
+
+  classDef accepted fill:#e8f4ed,stroke:#43825a,color:#153d25
+  classDef warning fill:#fff0dc,stroke:#b7791f,color:#633d0b
+  classDef rejected fill:#fce8e6,stroke:#b94a48,color:#701e1c
+  classDef muted fill:#f1f3f5,stroke:#7b8794,color:#344054
+  class scopeA accepted
+  class scopeB rejected
+  class future warning
+  class network,scanner,disclaimer muted
