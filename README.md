@@ -22,6 +22,7 @@ Based on repository code and recorded verification as of **2026-10-20 JST**, not
 | [OSS playground](docs/playground.md) | Prometheus, Grafana, node_exporter, two-node kind cluster | Startup, scrape targets, Grafana API query and kind readiness verified. Browser dashboards and kind workloads unverified; Kyverno is design only. |
 | [Network visibility](docs/network-visibility.md) | Host metrics, approved manual inventory, dashboard definition, limited DNS-trial template | Phase 1–2 implementation in progress; deployment/display unverified. IDS and blocking are future work. |
 | [Security-analysis VM](docs/security-analysis-vm.md) | NIC-less guest, read-only ISO transfer, independent Workbench and REA/Ghidra tools | Scope A (VM foundation/basic operations) conditionally owner-accepted. Scope B (REA → Ghidra analysis capability) not accepted; original `FAIL` / `REPORT=UNVERIFIED` retained. |
+| [Local GPU security analysis](docs/local-gpu-security-analysis-design.md) | Separate offline log preprocessing and optional LLM analysis design | Inactive Phase 1 proposal; synthetic validation only. No deployment or GPU benchmark. |
 | [Open WebUI](docs/ops-runbook.md#1-open-webui-stop--start) | Preserved chat UI stack | Intentionally stopped; data retained. Real LLM API connections unverified. |
 
 Detailed evidence: [build progress](docs/build-progress.md). Newer topic-specific records linked above take precedence over older build entries.
@@ -89,4 +90,3 @@ Setup and operations scripts can modify the host; read their runbooks before exe
 - External writes, credentials, paid services and network changes follow their documented approval boundaries.
 
 License: not yet specified.
-

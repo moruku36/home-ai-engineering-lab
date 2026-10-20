@@ -1,0 +1,51 @@
+# Proposed Compose extension / overlay for local security log analysis.
+# INACTIVE PROPOSAL ONLY: Do not apply to live NUC without explicit authorization.
+# Existing stacks/n8n/compose.yaml and GitHub daily report services remain untouched.
+
+services:
+  # Python worker extension for security preprocessing and Ollama relay
+  security-pipeline:
+    build:
+      context: ../../
+      dockerfile: stacks/n8n/security-pipeline.Dockerfile
+    image: home-ai-lab/security-pipeline:1
+    container_name: security-pipeline
+    restart: unless-stopped
+    # Strictly no published ports to LAN
+    environment:
+      JOBS_TOKEN: ${JOBS_TOKEN:?set in .env}
+      # Local authenticated proxy pointing to Windows Ollama over loopback/SSH tunnel
+      # Never point directly to unauthenticated LAN IPs
+      LLM_ENDPOINT: ${LLM_ENDPOINT:-http://127.0.0.1:11434}
+      LLM_MODEL: ${LLM_MODEL:-huihui_ai/qwen3-abliterated:8b}
+      LLM_TIMEOUT_SECONDS: "120"
+      LLM_MAX_CONCURRENCY: "1"
+      SECURITY_REPORT_DIR: /data/security-reports
+      SECURITY_STATE_DIR: /data/security-state
+      TZ: Asia/Tokyo
+    volumes:
+      # Separate isolated storage volumes (protects existing jobs-reports and jobs-state)
+      - security-reports:/data/security-reports
+      - security-state:/data/security-state
+      # Read-only access to host logs (staged via syslog forwarder or read-only directory)
+      - /var/log:/var/log/host:ro
+    networks:
+      - internal
+      - monitor
+    read_only: true
+    security_opt:
+      - "no-new-privileges:true"
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    pids_limit: 128
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  # Isolated volumes dedicated exclusively to security evaluation
+  security-reports:
+  security-state:
