@@ -22,7 +22,7 @@ English first, Japanese second. "Language" tells you what the document is writte
 | Doc | Language | About / 内容 |
 |---|---|---|
 | [security-operations.md](security-operations.md) | JA | Security controls, credential handling, what to do if a secret leaks / セキュリティ運用・漏えい時の対応 |
-| [security-analysis-vm.md](security-analysis-vm.md) | JA | Dedicated security analysis VM design and phases / 専用セキュリティ解析VMの設計と段階 |
+| [security-analysis-vm.md](security-analysis-vm.md) | JA | Current VM architecture, limited results and acceptance boundaries / VMの現在構成・限定試験結果・受入れ範囲（A条件付き受入れ、B未受入れ） |
 | [ai-api-key-management.md](ai-api-key-management.md) | JA | Storing / rotating LLM API keys, cost limits. **Open WebUI is stopped, so this is parked** / APIキー管理（Open WebUI停止中のため保留） |
 | [mcp-internal-api.md](mcp-internal-api.md) | JA | MCP server design, controls, verification / MCPの設計・制御・検証 |
 | [backup-restore.md](backup-restore.md) | JA | Backup, restore test, recovery / バックアップ・復元・復旧 |
@@ -50,3 +50,4 @@ English first, Japanese second. "Language" tells you what the document is writte
 - **EN:** Never put secrets, real LAN addresses, MACs or serial numbers here. Mark anything unverified as unverified.
 - **JA:** 秘密情報・実際のLANアドレス・MAC・シリアルは書かない。未検証のものは未検証と明記する。
 - Check before committing / コミット前の確認: `bash scripts/scan-secrets.sh`
+
