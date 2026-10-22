@@ -17,6 +17,7 @@ BASE = f"http://127.0.0.1:{PORT}"
 TOK_A = "a" * 40
 TOK_B = "b" * 40
 SECRET_ARG = "SUPER-SECRET-ARGUMENT-VALUE"
+SECRET_EXTRA = "SUPER-SECRET-EXTRA-KEY-VALUE"
 fails = []
 
 
@@ -107,6 +108,65 @@ def main():
         check("invalid JSON -> -32700", http("POST", "/mcp", raw=b"{nope", token=TOK_A)[1]["error"]["code"] == -32700)
         check("batch rejected -> -32600", http("POST", "/mcp", [{"jsonrpc": "2.0", "id": 1, "method": "ping"}], TOK_A)[1]["error"]["code"] == -32600)
         check("oversize body -> 413", http("POST", "/mcp", raw=b"x" * (70 * 1024), token=TOK_A)[0] == 413)
+
+        # ---- argument validation: inputSchema additionalProperties:false is enforced before the tool runs.
+        # Shapes: extra key / schema violation -> result.isError:true (model-correctable tool input error, as the
+        # official SDK does); non-object `arguments` -> JSON-RPC -32602 (malformed request params);
+        # omitted `arguments` -> treated as {} (the tool's own required/type checks then apply).
+        def tres(r):
+            return r["result"]["content"][0]["text"], r["result"]["isError"]
+
+        ok_cases = {"echo": {"text": "ok"}, "server_time": {}, "list_reports": {},
+                    "read_report": {"name": "demo__repo.md"}, "selftest_sleep": {"seconds": 0}}
+        for tool, good in ok_cases.items():
+            s, r = call(tool, good)
+            check(f"{tool}: declared arguments still succeed", s == 200 and "result" in r and tres(r)[1] is False, r)
+            s, r = call(tool, dict(good, unexpected=True, note=SECRET_EXTRA))
+            txt = tres(r)[0] if "result" in r else ""
+            check(f"{tool}: extra keys -> result.isError, not a JSON-RPC error", s == 200 and "error" not in r and tres(r)[1] is True, r)
+            check(f"{tool}: extra-key rejection comes from the validator, tool output not returned", txt.startswith("unexpected argument(s)") and '"unexpected"' in txt, txt)
+        s, r = call("echo", {"unexpected": True})
+        check("echo: extra key without required text -> unexpected-argument error", tres(r)[1] is True and tres(r)[0].startswith("unexpected argument(s)"), r)
+        s, r = call("server_time", {f"k{i}": i for i in range(20)})
+        check("many extra keys -> bounded message", tres(r)[1] is True and len(tres(r)[0]) <= 300 and "+15 more" in tres(r)[0], r)
+        t0 = time.time()
+        s, r = call("selftest_sleep", {"seconds": 4, "unexpected": True})
+        check("selftest_sleep + extra key is rejected before running (no -32002 timeout)", "result" in r and tres(r)[1] is True and time.time() - t0 < 0.8, f"{time.time()-t0:.1f}s")
+
+        for bad in [[], [1], "x", 123, True, None]:
+            for tool in ("echo", "server_time"):
+                s, r = rpc("tools/call", {"name": tool, "arguments": bad})
+                check(f"{tool}: non-object arguments {bad!r} -> -32602", s == 200 and r.get("error", {}).get("code") == -32602 and "result" not in r, r)
+        s, r = rpc("tools/call", {"name": "server_time"})
+        check("server_time: omitted arguments is accepted", "result" in r and tres(r)[1] is False, r)
+        s, r = rpc("tools/call", {"name": "list_reports"})
+        check("list_reports: omitted arguments is accepted", "result" in r and tres(r)[1] is False, r)
+        s, r = rpc("tools/call", {"name": "echo"})
+        s2, r2 = call("echo", {})
+        check("echo: omitted arguments -> isError (required text), same as {}", "result" in r and tres(r)[1] is True and tres(r) == tres(r2) and "text must be a string" in tres(r)[0], r)
+        s, r = rpc("tools/call", {"name": "read_report"})
+        check("read_report: omitted arguments -> isError (required name)", "result" in r and tres(r)[1] is True and "invalid report name" in tres(r)[0], r)
+
+        # existing required / type / size validation is unchanged
+        check("echo: non-string text -> isError", tres(call("echo", {"text": 123})[1])[1] is True)
+        check("echo: 500 chars ok / 501 chars -> isError", tres(call("echo", {"text": "x" * 500})[1])[1] is False and tres(call("echo", {"text": "x" * 501})[1])[1] is True)
+        check("read_report: non-string name -> isError", tres(call("read_report", {"name": 123})[1])[1] is True)
+        for size, expect_err in ((64 * 1024, False), (64 * 1024 + 1, True)):
+            big = os.path.join(reports, "big.md")
+            open(big, "wb").write(b"a" * size)
+            s, r = call("read_report", {"name": "big.md"})
+            check(f"read_report: {size} byte report -> isError={expect_err}", tres(r)[1] is expect_err and (not expect_err or "too large" in tres(r)[0]), r)
+            os.remove(big)
+
+        # auth / allowlist / unknown-tool still win over argument validation (no schema detail leaks to a denied client)
+        s, r = call("read_report", {"name": "demo__repo.md", "unexpected": True}, TOK_B)
+        check("beta + read_report + extra key -> -32003 (allowlist first)", r.get("error", {}).get("code") == -32003, r)
+        s, r = rpc("tools/call", {"name": "read_report", "arguments": []}, TOK_B)
+        check("beta + read_report + non-object arguments -> -32003 (allowlist first)", r.get("error", {}).get("code") == -32003, r)
+        s, r = call("rm_rf", {"unexpected": True})
+        check("unknown tool + extra key -> -32602 unknown tool", r.get("error", {}).get("code") == -32602 and r["error"]["message"] == "unknown tool", r)
+        check("extra key without a token -> 401", http("POST", "/mcp", {"jsonrpc": "2.0", "id": 1, "method": "tools/call", "params": {"name": "echo", "arguments": {"text": "ok", "unexpected": True}}})[0] == 401)
+
         t0 = time.time()
         s, r = call("selftest_sleep", {"seconds": 4})
         check("tool timeout -> -32002 within ~1s", r.get("error", {}).get("code") == -32002 and time.time() - t0 < 3, f"{time.time()-t0:.1f}s")
@@ -121,6 +181,10 @@ def main():
         check("audit has no raw argument values", SECRET_ARG not in log)
         check("audit records denials", any(x.get("status") == "denied_tool" for x in lines) and any(x.get("status") == "auth_fail" for x in lines))
         check("audit records tool + client + hash", any(x.get("tool") == "echo" and x.get("client") == "alpha" and x.get("args_sha256") for x in lines))
+        check("audit has no extra-argument values or key names", SECRET_EXTRA not in log and '"unexpected"' not in log)
+        check("audit records invalid_arguments with tool + hash + size only",
+              any(x.get("status") == "invalid_arguments" and x.get("tool") == "echo" and x.get("args_sha256") and x.get("args_bytes") for x in lines))
+        check("audit records invalid_params (non-object arguments)", any(x.get("status") == "invalid_params" and x.get("args_sha256") for x in lines))
     finally:
         p.terminate()
     print(f"\n{len(fails)} failure(s)" if fails else "\nALL PASSED")
