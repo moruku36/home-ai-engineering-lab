@@ -161,6 +161,21 @@ def tool_descriptor(name):
             "annotations": {"readOnlyHint": True, "destructiveHint": False, "openWorldHint": False}}
 
 
+def unexpected_arguments(schema, args):
+    """Argument names the advertised inputSchema forbids (additionalProperties: false).
+    Checked before the tool runs, so a call the schema rejects never executes."""
+    if schema.get("additionalProperties") is not False:
+        return []
+    allowed = schema.get("properties", {})
+    return sorted(k for k in args if k not in allowed)
+
+
+def unexpected_arguments_message(keys):
+    shown = ", ".join(json.dumps(k[:40]) for k in keys[:5])       # bounded echo of the client's own key names
+    more = f" (+{len(keys) - 5} more)" if len(keys) > 5 else ""
+    return f"unexpected argument(s) not allowed by input schema: {shown}{more}"
+
+
 def run_with_timeout(fn, args):
     box = {}
 
@@ -266,18 +281,28 @@ class Handler(BaseHTTPRequestHandler):
                 res = {"tools": [tool_descriptor(t) for t in TOOLS if t in CLIENTS[client]["tools"]]}
             elif method == "tools/call":
                 name = params.get("name")
-                args = params.get("arguments") if isinstance(params.get("arguments"), dict) else {}
+                raw_args = params.get("arguments") if "arguments" in params else {}   # omitted -> {}
+                args_is_object = isinstance(raw_args, dict)    # present but not an object (list/str/number/null) is rejected below
+                args = raw_args if args_is_object else {}
                 ev["tool"] = name if isinstance(name, str) and len(name) < 64 else "?"
-                ev["args_sha256"] = hashlib.sha256(json.dumps(args, sort_keys=True).encode()).hexdigest()[:16]
-                ev["args_bytes"] = len(json.dumps(args))
+                ev["args_sha256"] = hashlib.sha256(json.dumps(raw_args, sort_keys=True).encode()).hexdigest()[:16]
+                ev["args_bytes"] = len(json.dumps(raw_args))
                 if name not in TOOLS:
                     ev.update(status="unknown_tool", http=200)
                     return self._send(200, rpc_error(rid, -32602, "unknown tool"))
                 if name not in CLIENTS[client]["tools"]:
                     ev.update(status="denied_tool", http=200)
                     return self._send(200, rpc_error(rid, -32003, "tool not permitted for this client"))
-                state, out = run_with_timeout(TOOLS[name][2], args)
-                ev["status"] = state
+                if not args_is_object:                         # malformed request params -> JSON-RPC error
+                    ev.update(status="invalid_params", http=200)
+                    return self._send(200, rpc_error(rid, -32602, "invalid params: arguments must be an object"))
+                extra = unexpected_arguments(TOOLS[name][1], args)
+                if extra:                                      # schema violation -> tool result with isError, tool not run
+                    state, out = "tool_error", unexpected_arguments_message(extra)
+                    ev["status"] = "invalid_arguments"
+                else:
+                    state, out = run_with_timeout(TOOLS[name][2], args)
+                    ev["status"] = state
                 if state == "timeout":
                     return self._send(200, rpc_error(rid, -32002, "tool timed out"))
                 if state == "crash":
