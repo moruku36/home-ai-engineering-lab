@@ -1,0 +1,21 @@
+name: GitHub snapshot metrics (offline)
+on:
+  pull_request:
+    paths:
+      - 'scripts/github_snapshot_metrics.py'
+      - 'tests/github_snapshot_metrics_test.py'
+      - 'stacks/observability/grafana/provisioning/dashboards/json/github-daily.json'
+      - '.github/workflows/github-snapshot-metrics.yml'
+permissions:
+  contents: read
+jobs:
+  offline:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Synthetic metrics and dashboard tests
+        run: python3 -m unittest discover -s tests -p github_snapshot_metrics_test.py -v
+      - name: Scan repository for secrets
+        run: bash scripts/scan-secrets.sh
