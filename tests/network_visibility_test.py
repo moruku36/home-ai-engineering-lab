@@ -203,6 +203,26 @@ class DashboardStaticConsistencyTests(unittest.TestCase):
                 self.assertRegex(expr, r'\band\s+on\s*\(\s*job\s*,\s*instance\s*\)')
                 self.assertRegex(expr, r'time\(\)\s*-\s*lab_host_network_snapshot_timestamp_seconds\{[^}]*\}\s*<\s*120\b')
 
+    def test_error_drop_panel_sums_distinct_counter_rates(self):
+        # rate() removes the metric name. A multi-name selector would collapse
+        # the four metrics onto identical labels and fail before aggregation.
+        panel = next(p for p in self.dashboard['panels'] if p['id'] == 7)
+        total = panel['targets'][0]['expr'].split(' and on')[0]
+        self.assertNotIn('__name__', total)
+        rates = re.findall(r'rate\((lab_host_network_\w+)\{([^}]+)\}\[5m\]\)', total)
+        expected = {f'lab_host_network_{direction}_{kind}_total'
+                    for direction in ('receive', 'transmit')
+                    for kind in ('errors', 'dropped')}
+        self.assertEqual(len(rates), 4)
+        self.assertEqual({metric for metric, _ in rates}, expected)
+        for _, selector in rates:
+            self.assertIn('job="node"', selector)
+            self.assertIn('device=~"$device"', selector)
+        self.assertEqual(total.count(' + '), 3)
+        self.assertIn('total', panel['title'].lower())
+        self.assertIn('total', panel['targets'][0]['legendFormat'].lower())
+        self.assertIn('not a unique-packet count', panel['description'])
+
     def test_compose_mounts_match_provisioning_and_textfile_paths(self):
         compose = (self.OBS / 'compose.yaml').read_text(encoding='utf-8')
         provider = (self.OBS / 'grafana/provisioning/dashboards/network.yaml').read_text(encoding='utf-8')
