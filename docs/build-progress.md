@@ -1,8 +1,8 @@
 # Build progress & Final Report / 構築進捗・最終報告 (2026-10-15)
 
-最終更新: 2026-10-15 JST（追加フェーズを §0 に追記、OSS プレイグラウンドの初回起動と追加検証を §0.5 に追記）。Phase 0〜Phase 5 の導入および実機検証結果を統合した最終報告。実機での検証が済んでいない項目は合格扱いとせず、「未検証・未実施の項目」に分離して記録している。
+最終更新: 2026-10-24 JST（ネットワーク監視のGitHub反映／実機証拠と次タスクを §0.6 に追記）。Phase 0〜Phase 5 の導入および実機検証結果を統合した最終報告。実機での検証が済んでいない項目は合格扱いとせず、「未検証・未実施の項目」に分離して記録している。
 
-## 0. 追加フェーズ：運用基盤の改善（2026-10-15）— **最新**
+## 0. 追加フェーズ：運用基盤の改善（2026-10-15、§0.6追記は2026-10-24）
 
 **EN summary:** Open WebUI was stopped (data kept); a read-only GitHub collector + daily Markdown report (07:00 JST, n8n) was added and is readable through MCP; alerts go through an Uptime Kuma push monitor; the backup script no longer restarts stacks that were stopped on purpose; an external heartbeat, off-device backup options and an ops runbook were prepared. **No paid service was added.** Not yet delivered: notifications (no channel), off-device backup, token-based features.
 以下の「1〜9」は Phase 5 時点の最終報告で、**この節に反する記述（Open WebUI が稼働中など）は、この節が優先**です。
@@ -81,6 +81,25 @@
 3. **kubectl とクラスタのバージョン差がサポート範囲外**：スクリプトは最新の stable の kubectl（`v1.37.1`）を入れるが、kind v0.27.0 が作るクラスタは `v1.32.2`（kubectl のサポートは ±1 マイナー）。`get` 系は動いた。**PR #12 で修正し、実機で確認済み**（07:47 UTC にクラスタを再作成。kubectl は `v1.37.1` → `v1.32.13` に入れ替わり、クライアント `v1.32.13`／サーバー `v1.32.2`。両ノードとも固定した digest のイメージで起動）：`playground-run.sh` で kubectl を `v1.32.13`（従来どおり sha256 検証）、ノードイメージを `kindest/node:v1.32.2`（digest 指定）に固定。別バージョンの kubectl が入っていれば次回実行時に入れ替える。詳細は [playground/kubernetes.md](playground/kubernetes.md)。
 4. `kind create --wait` は control-plane だけを待つため、スクリプト直後の `kubectl get nodes` で worker が `NotReady` と出る（約1.5分で `Ready`）。失敗ではない。**PR #12 で修正し、実機で確認済み**：`kubectl wait --for=condition=Ready node --all --timeout=180s` を `kubectl get nodes` の前に追加。再作成時は両ノードの `condition met` の後に `Ready` で表示された。2回目の実行も `cluster exists` で終了コード 0（kubectl の再入れ替えなし）。
 5. SSH の LoginGraceTime が短いため、鍵のパスフレーズ入力が遅れると接続が切られる（`Connection closed`）。手順上の注意として記録（設定は変更していない）。
+
+<a id="network-runtime-status"></a>
+
+### 0.6 ネットワーク監視の反映状況と次タスク（2026-10-24 JST）
+
+**GitHubへの反映と実機適用は別です。** [PR #25](https://github.com/moruku36/home-ai-engineering-lab/pull/25) は main の `1011859161ce` にマージ済み。変更は静的テスト・手順の補足・公開commit参照の短縮であり、実機の収集開始を行うPRではありません。以下は2026-10-24 JSTの記録時点の照合で、本人確認の正確な観測時刻は未記録です。GUIの追加確認は2026-10-23 22:21 UTCです。§0.5以前の成功記録を現在の再検証とは扱いません。
+
+| 対象 | GitHub上の設定・過去の記録 | 今回の実機証拠と限界 |
+|---|---|---|
+| 観測基盤 | [Compose](../stacks/observability/compose.yaml) は Prometheus `v3.15.0`、Grafana `12.4.3`、node-exporter `v1.12.1` を指定 | 本人の稼働一覧の3タグと一致。Kuma `2`、n8n `2.43.5` も稼働一覧にあり。ただしcheckout・マウント・起動引数・設定内容の一致は未確認 |
+| Grafanaの入口 | Composeは3000・9090をloopback限定。既存の[データソース](../stacks/observability/grafana/provisioning/datasources/prometheus.yaml)はPrometheus | 本人がlocalhost 3000・9090のLISTEN、Grafana `/api/health` の database ok／version `12.4.3`／commit `86c83248` とブラウザログインを確認。現在のscrape成功・データソース疎通・パネル表示の証明ではない |
+| Grafanaの登録・表示 | リポジトリにはPrometheusデータソースとHome network dashboardのprovisioning定義あり | GUIの読み取り確認ではPrometheusが既定データソースとして登録済み、ダッシュボード一覧は未作成。既存パネルがなく表示データ・最終時刻は確認できず、設定適用・収集成功は未検証 |
+| ホストNIC監視（Phase 1） | [runbook](network-visibility-runbook.md) のホストsnapshot、textfile mount、[ダッシュボード定義](../stacks/observability/grafana/provisioning/dashboards/json/network-overview.json)はmainに存在。30秒収集の自動timerは未実装 | snapshotの生成・更新、`lab_host_network_*` の収集、provisioning反映、120秒の鮮度条件と実数値表示は未確認。家庭全体の通信量ではない |
+| DNS試験（Phase 2） | Compose雛形と合成データ試験のみ | 今回の導入・収集・表示の証拠なし。実機適用済みとは扱わない |
+| 遠隔アクセス | 本人がUbuntu本体にTailscaleを導入しtailnetへ参加 | Windowsからping、GrafanaログインとServe backgroundでの再表示を本人が確認。Serve対象は3000のみ・tailnet限定、9090やFunnelは公開していない。作業agentのSSH認証接続は未成立 |
+
+今回agentは実機への接続・設定変更・サービス再作成・追加収集・ジョブ起動を行っていません。イメージタグの一致やTailscale疎通だけで、最新mainの適用やネットワーク監視完成とは判定しません。
+
+**次タスク（未着手）：既存データをGrafanaに集約する。** [ネットワークロードマップのチェックリストと表示案](network-visibility.md#grafana-aggregation-next)に沿い、実機の前提判定 → 既存データソースの棚卸し → 収集済み／未収集の分類 → 集約案の順で進めます。現時点で新しい収集は開始しません。
 
 ---
 
