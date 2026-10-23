@@ -1,6 +1,7 @@
 """Offline tests only. Synthetic counters, identities, and query logs; no probes."""
 import importlib.util
 import json
+import re
 from pathlib import Path
 import tempfile
 import unittest
@@ -91,6 +92,74 @@ class ReportTests(unittest.TestCase):
             path.write_bytes(b' ' * (report.MAX_BYTES + 1))
             with self.assertRaises(ValueError):
                 report.load(path)
+
+
+class DashboardStaticConsistencyTests(unittest.TestCase):
+    """Static checks that the Grafana dashboard definition matches what the exporter,
+    Prometheus config, provisioning and Compose files actually provide.
+    They read repository files only; they prove nothing about a running Grafana."""
+    OBS = ROOT / 'stacks' / 'observability'
+    DASHBOARD = OBS / 'grafana/provisioning/dashboards/json/network-overview.json'
+
+    def setUp(self):
+        self.dashboard = json.loads(self.DASHBOARD.read_text(encoding='utf-8'))
+        rendered = metrics.render(COUNTERS, ['test0'], 1000)
+        self.emitted = set(re.findall(r'^(lab_host_network_\w+?)(?:\{| )', rendered, re.M))
+        self.exprs = [t['expr'] for p in self.dashboard['panels'] for t in p.get('targets', [])]
+
+    def test_dashboard_identity_matches_runbook(self):
+        self.assertEqual(self.dashboard['uid'], 'home-network-overview')
+        runbook = (ROOT / 'docs/network-visibility-runbook.md').read_text(encoding='utf-8')
+        self.assertIn(self.dashboard['uid'], runbook)
+        self.assertFalse(self.dashboard.get('editable', False))
+
+    def test_every_host_metric_used_is_emitted_by_the_exporter(self):
+        self.assertTrue(self.emitted)
+        used = set()
+        for expr in self.exprs + [v['query'] for v in self.dashboard['templating']['list']]:
+            used |= set(re.findall(r'\blab_host_network_\w+', expr))
+        self.assertTrue(used)
+        self.assertEqual(used - self.emitted, set(), 'dashboard queries a metric the script never writes')
+        for expr in self.exprs:
+            for pattern in re.findall(r'__name__=~"([^"]+)"', expr):
+                matched = {n for n in self.emitted if re.fullmatch(pattern, n)}
+                self.assertEqual(matched, {n for n in self.emitted if 'errors' in n or 'dropped' in n})
+
+    def test_job_label_and_datasource_exist_in_provisioning(self):
+        prometheus = (self.OBS / 'prometheus/prometheus.yml').read_text(encoding='utf-8')
+        jobs = set(re.findall(r'job_name:\s*(\S+)', prometheus))
+        datasource = (self.OBS / 'grafana/provisioning/datasources/prometheus.yaml').read_text(encoding='utf-8')
+        names = set(re.findall(r'^\s*-\s*name:\s*(\S+)', datasource, re.M))
+        for expr in self.exprs:
+            for job in re.findall(r'job="([^"]+)"', expr):
+                self.assertIn(job, jobs)
+        panels = self.dashboard['panels'] + self.dashboard['templating']['list']
+        for item in panels:
+            self.assertIn(item['datasource'], names)
+
+    def test_host_nic_panels_are_gated_by_snapshot_freshness(self):
+        # Design in the runbook: a stale or missing snapshot must show no data, not an old value.
+        for expr in self.exprs:
+            if 'lab_host_network_' in expr and 'snapshot_timestamp' not in expr.split('and on')[0]:
+                self.assertIn('lab_host_network_snapshot_timestamp_seconds', expr)
+                self.assertRegex(expr, r'\band\s+on\s*\(\s*job\s*,\s*instance\s*\)')
+                self.assertRegex(expr, r'time\(\)\s*-\s*lab_host_network_snapshot_timestamp_seconds\{[^}]*\}\s*<\s*120\b')
+
+    def test_compose_mounts_match_provisioning_and_textfile_paths(self):
+        compose = (self.OBS / 'compose.yaml').read_text(encoding='utf-8')
+        provider = (self.OBS / 'grafana/provisioning/dashboards/network.yaml').read_text(encoding='utf-8')
+        self.assertIn('./grafana/provisioning:/etc/grafana/provisioning:ro', compose)
+        path = re.search(r'path:\s*(\S+)', provider).group(1)
+        self.assertEqual(path, '/etc/grafana/provisioning/dashboards/json')
+        relative = Path(path).relative_to('/etc/grafana/provisioning')
+        self.assertTrue((self.OBS / 'grafana/provisioning' / relative / self.DASHBOARD.name).is_file())
+        self.assertIn('--collector.textfile.directory=/textfile', compose)
+        self.assertIn('./data/textfile:/textfile:ro', compose)
+        # The exporter publishes no port; only loopback UIs are published.
+        published_ports = re.findall(r'-\s*"([^"]+:\d+)"', compose)
+        self.assertEqual(set(published_ports), {'127.0.0.1:9090:9090', '127.0.0.1:3000:3000'})
+        for published in published_ports:
+            self.assertTrue(published.startswith('127.0.0.1:'), published)
 
 
 if __name__ == '__main__':

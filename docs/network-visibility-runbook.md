@@ -16,6 +16,8 @@ python scripts/network_report.py \
   --allow-client 192.0.2.10 --output data/network-demo/report.html
 ```
 
+同じテストに、ダッシュボード定義の静的整合性検査（`DashboardStaticConsistencyTests`）を含みます。パネルのクエリが使うメトリクス名が`scripts/network_host_metrics.py`の出力と一致すること、`job`ラベルとデータソース名が`prometheus.yml`・provisioningと一致すること、NICパネルが「スナップショットが古い/無いときは表示しない」条件を持つこと、Composeのマウントと公開ポート（loopbackのみ）を、リポジトリのファイルだけで確認します。Grafanaやコンテナは起動しません。**実機のGrafana表示の証拠にはなりません**（名前の不一致による空パネルを事前に防ぐだけです）。
+
 サンプルは文書用アドレスと`example.com`のみ。サンプル日時から24時間を超えればDNS表は空になります。試験の固定時計はunit testで指定しています。
 生成HTMLをローカルで開きます。サーバーは起動せず、外部のJSやCSSも読み込みません。台帳は接続検知ではなく手動の確認記録です。
 AdGuardの`GET /control/querylog`のJSON（`data[].time/client/question.name`）を入力できますが、自動収集やAPI認証は今回追加していません。
@@ -121,6 +123,7 @@ query logをローカルのGit管理外ファイルに保存し、`network_repor
 | 概要文書を先にGitHub公開 | PR #14の最初のcommit `23c2f73` |
 | コード・ダッシュボード・DNS Compose雛形 | PR上の実装。自動deployしない |
 | ホストcounter/対象限定/失敗時の振舞い、DNS集計・時刻・HTML escape | 合成データのunit testで検証（結果はPR） |
+| ダッシュボードJSON・exporter出力・Prometheus/Grafana設定・Composeの名前/パス整合 | 静的テストで検証（ファイルのみ。実機表示は別） |
 | NUC実接続・現在の作業ツリー/NIC確認 | 既存agentで読み取り確認済み。上記の結果参照。適用直前に再確認する |
 | Docker Compose構成検証 / AdGuard image起動 | 両Composeのconfigは[Linux CIで成功](https://github.com/moruku36/home-ai-engineering-lab/actions/runs/38719281759)。実機でのimage起動は未実施 |
 | NUC上の収集・稼働、Grafanaブラウザ表示 | 未実施。実機確認後に記録する |
