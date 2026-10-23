@@ -63,14 +63,33 @@ def atomic_write(destination, content):
             os.unlink(name)
 
 
-def main():
+def collect(interfaces, destination, samples=1, interval_seconds=30):
+    """Write a bounded window of host snapshots; stop on the first failure."""
+    if not isinstance(samples, int) or not 1 <= samples <= 120:
+        raise ValueError("samples must be between 1 and 120")
+    if not isinstance(interval_seconds, int) or not 5 <= interval_seconds <= 60:
+        raise ValueError("interval seconds must be between 5 and 60")
+    for index in range(samples):
+        if index:
+            time.sleep(interval_seconds)
+        # Source remains fixed to the Ubuntu host's procfs.
+        content = render(Path("/proc/net/dev").read_text(), interfaces, time.time())
+        atomic_write(destination, content)
+
+
+def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--interface", action="append", required=True)
     parser.add_argument("--output", type=Path, required=True)
-    args = parser.parse_args()
-    # Source is intentionally fixed to the host's procfs in production.
-    content = render(Path("/proc/net/dev").read_text(), args.interface, time.time())
-    atomic_write(args.output, content)
+    parser.add_argument("--samples", type=int, default=1,
+                        help="number of snapshots (1-120; default: one snapshot)")
+    parser.add_argument("--interval-seconds", type=int, default=30,
+                        help="seconds between snapshots (5-60; default: 30)")
+    args = parser.parse_args(argv)
+    try:
+        collect(args.interface, args.output, args.samples, args.interval_seconds)
+    except ValueError as error:
+        parser.error(str(error))
 
 
 if __name__ == "__main__":
