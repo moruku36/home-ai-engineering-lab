@@ -1,0 +1,295 @@
+{
+  "uid": "home-github-daily",
+  "title": "GitHub daily snapshot aggregates (not push counts)",
+  "description": "Existing saved snapshot aggregates. Gauge values, fixed metric labels, explicit coverage and freshness. No new GitHub calls.",
+  "schemaVersion": 39,
+  "version": 1,
+  "timezone": "Asia/Tokyo",
+  "refresh": "30s",
+  "time": {
+    "from": "now-7d",
+    "to": "now"
+  },
+  "tags": [
+    "github",
+    "snapshot-only"
+  ],
+  "panels": [
+    {
+      "id": 1,
+      "title": "変換元の状態（直近収集ジョブの成否とは別）",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "lab_github_export_state{job=\"node\"} and on(job,instance) (time() - lab_github_export_timestamp_seconds{job=\"node\"} < 120)",
+          "legendFormat": "{{metric}}",
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得／連携更新なし",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "未取得",
+                  "color": "#8e8e8e"
+                },
+                "1": {
+                  "text": "取得済み",
+                  "color": "#73BF69"
+                },
+                "2": {
+                  "text": "部分取得／下限",
+                  "color": "#FADE2A"
+                },
+                "3": {
+                  "text": "古いデータ",
+                  "color": "#FF9830"
+                },
+                "4": {
+                  "text": "取得／変換失敗",
+                  "color": "#F2495C"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 2,
+      "title": "最終成功snapshotの経過秒",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 12,
+        "y": 0,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - lab_github_snapshot_timestamp_seconds{job=\"node\"} and on(job,instance) (time() - lab_github_export_timestamp_seconds{job=\"node\"} < 120)",
+          "legendFormat": "{{metric}}",
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "未取得／連携更新なし",
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 3,
+      "title": "各指標の取得状態",
+      "type": "table",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 0,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "lab_github_metric_state{job=\"node\"} and on(job,instance) (time() - lab_github_export_timestamp_seconds{job=\"node\"} < 120)",
+          "legendFormat": "{{metric}}",
+          "instant": true,
+          "format": "table"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得／連携更新なし",
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "未取得",
+                  "color": "#8e8e8e"
+                },
+                "1": {
+                  "text": "取得済み",
+                  "color": "#73BF69"
+                },
+                "2": {
+                  "text": "部分取得／下限",
+                  "color": "#FADE2A"
+                },
+                "3": {
+                  "text": "古いデータ",
+                  "color": "#FF9830"
+                },
+                "4": {
+                  "text": "取得／変換失敗",
+                  "color": "#F2495C"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 4,
+      "title": "snapshot時点の件数（取得状態も確認）",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 12,
+        "y": 8,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "lab_github_value{job=\"node\",metric=~\"repos|open_issues|open_prs|alerts_critical|alerts_warn|api_calls\"} and on(job,instance) (time() - lab_github_export_timestamp_seconds{job=\"node\"} < 120) and on(job,instance) (time() - lab_github_snapshot_timestamp_seconds{job=\"node\"} <= 93600) and on(job,instance) (lab_github_export_state{job=\"node\"} == 1)",
+          "legendFormat": "{{metric}}",
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得／連携更新なし",
+          "mappings": [],
+          "custom": {
+            "lineInterpolation": "stepAfter"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 5,
+      "title": "前日JSTのPR／Issue件数（収集時点で描画、確定値ではない）",
+      "type": "timeseries",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 0,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "lab_github_value{job=\"node\",metric=~\"prs_opened|prs_merged|prs_closed_unmerged|issues_opened|issues_closed\"} and on(job,instance) (time() - lab_github_export_timestamp_seconds{job=\"node\"} < 120) and on(job,instance) (time() - lab_github_snapshot_timestamp_seconds{job=\"node\"} <= 93600) and on(job,instance) (lab_github_export_state{job=\"node\"} == 1)",
+          "legendFormat": "{{metric}}",
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得／連携更新なし",
+          "mappings": [],
+          "custom": {
+            "lineInterpolation": "stepAfter"
+          }
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 6,
+      "title": "最新pushが前日JST内のリポジトリ数（下限、push回数ではない）",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 12,
+        "y": 16,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "lab_github_value{job=\"node\",metric=~\"latest_push_repositories\"} and on(job,instance) (time() - lab_github_export_timestamp_seconds{job=\"node\"} < 120) and on(job,instance) (time() - lab_github_snapshot_timestamp_seconds{job=\"node\"} <= 93600) and on(job,instance) (lab_github_export_state{job=\"node\"} == 1)",
+          "legendFormat": "{{metric}}",
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得／連携更新なし",
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 7,
+      "title": "日次窓の終了時刻（JST・この時刻を含まない）",
+      "type": "stat",
+      "datasource": "Prometheus",
+      "gridPos": {
+        "x": 0,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "lab_github_activity_window_end_seconds{job=\"node\"} * 1000 and on(job,instance) (time() - lab_github_export_timestamp_seconds{job=\"node\"} < 120) and on(job,instance) (time() - lab_github_snapshot_timestamp_seconds{job=\"node\"} <= 93600) and on(job,instance) (lab_github_export_state{job=\"node\"} == 1)",
+          "legendFormat": "{{metric}}",
+          "instant": false,
+          "format": "time_series"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "unit": "dateTimeAsIso",
+          "noValue": "未取得／連携更新なし",
+          "mappings": []
+        },
+        "overrides": []
+      }
+    },
+    {
+      "id": 8,
+      "title": "読み方と限界",
+      "type": "text",
+      "gridPos": {
+        "x": 12,
+        "y": 24,
+        "w": 12,
+        "h": 8
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "**既存snapshot由来の集計だけを表示します。** 日次値は累積counterではありません。部分取得／下限は取得状態で確認し、未取得・失敗を0件と扱わないでください。グラフの時刻は収集時点で、対象日は日次窓で確認します。過去JSONの履歴はここへ自動取り込みしません。\n\nsnapshotの更新が26時間超で古い値を隠し、変換の更新が120秒超なら表示しません。JSONにない直近ジョブの失敗は検出できません。push回数・コミット数は未収集です。"
+      }
+    }
+  ]
+}
