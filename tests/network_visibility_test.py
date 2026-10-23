@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 import tempfile
 import unittest
+from unittest.mock import call, patch
 from datetime import datetime, timezone
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -48,6 +49,63 @@ class MetricsTests(unittest.TestCase):
             metrics.atomic_write(target, 'second\n')
             self.assertEqual(target.read_bytes(), b'second\n')
             self.assertEqual([p.name for p in Path(directory).iterdir()], ['host.prom'])
+
+
+class CollectionWindowTests(unittest.TestCase):
+    def test_default_is_one_snapshot_without_sleep(self):
+        with patch.object(metrics.Path, 'read_text', return_value=COUNTERS) as read, \
+             patch.object(metrics, 'atomic_write') as write, \
+             patch.object(metrics.time, 'time', return_value=1000), \
+             patch.object(metrics.time, 'sleep') as sleep:
+            metrics.main(['--interface', 'test0', '--output', 'synthetic.prom'])
+        read.assert_called_once_with()
+        self.assertEqual(write.call_count, 1)
+        self.assertIn('snapshot_timestamp_seconds 1000.0', write.call_args.args[1])
+        sleep.assert_not_called()
+
+    def test_bounded_window_refreshes_each_timestamp_and_stops(self):
+        timestamps = list(range(1000, 1360, 30))
+        with patch.object(metrics.Path, 'read_text', return_value=COUNTERS) as read, \
+             patch.object(metrics, 'atomic_write') as write, \
+             patch.object(metrics.time, 'time', side_effect=timestamps), \
+             patch.object(metrics.time, 'sleep') as sleep:
+            metrics.main(['--interface', 'test0', '--output', 'synthetic.prom',
+                          '--samples', '12', '--interval-seconds', '30'])
+        self.assertEqual(read.call_count, 12)
+        self.assertEqual(write.call_count, 12)
+        self.assertEqual(sleep.call_args_list, [call(30)] * 11)
+        for written, timestamp in zip(write.call_args_list, timestamps):
+            self.assertIn(f'snapshot_timestamp_seconds {float(timestamp)}', written.args[1])
+
+    def test_invalid_window_never_reads_or_writes(self):
+        with patch.object(metrics.Path, 'read_text') as read, \
+             patch.object(metrics, 'atomic_write') as write, \
+             patch.object(metrics.time, 'sleep') as sleep:
+            for samples, interval in [(0, 30), (121, 30), (1, 4), (1, 61)]:
+                with self.subTest(samples=samples, interval=interval), self.assertRaises(ValueError):
+                    metrics.collect(['test0'], 'synthetic.prom', samples, interval)
+        read.assert_not_called()
+        write.assert_not_called()
+        sleep.assert_not_called()
+
+    def test_failed_read_stops_without_replacing_last_success(self):
+        with patch.object(metrics.Path, 'read_text', side_effect=[COUNTERS, OSError('synthetic failure')]) as read, \
+             patch.object(metrics, 'atomic_write') as write, \
+             patch.object(metrics.time, 'sleep') as sleep:
+            with self.assertRaises(OSError):
+                metrics.collect(['test0'], 'synthetic.prom', samples=12)
+        self.assertEqual(read.call_count, 2)
+        self.assertEqual(write.call_count, 1)
+        sleep.assert_called_once_with(30)
+
+    def test_failed_write_stops_before_another_sample(self):
+        with patch.object(metrics.Path, 'read_text', return_value=COUNTERS) as read, \
+             patch.object(metrics, 'atomic_write', side_effect=OSError('synthetic write failure')), \
+             patch.object(metrics.time, 'sleep') as sleep:
+            with self.assertRaises(OSError):
+                metrics.collect(['test0'], 'synthetic.prom', samples=12)
+        read.assert_called_once_with()
+        sleep.assert_not_called()
 
 
 class ReportTests(unittest.TestCase):

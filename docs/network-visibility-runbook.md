@@ -68,13 +68,16 @@ sudo docker compose config -q
 sudo docker compose up -d --no-deps node-exporter grafana
 ```
 
-ホストスクリプトを30秒ごとに呼ぶ必要があります。自動timerは未設置です。初回は承認した短時間だけ別のホスト端末で次のloopを実行し、Ctrl+Cで終了します。
+ホストスクリプトを30秒ごとに呼ぶ必要があります。自動timerは未設置です。初回は承認した短時間だけ別のUbuntuホスト端末で12回の限定収集を行います。初回を即時に書き、以降30秒間隔、約5分30秒で終了します。Ctrl+Cでも停止できます。
 
 ```bash
 # From repository root on the Ubuntu host only:
-while python3 scripts/network_host_metrics.py --interface '<approved-host-nic>' \
-  --output stacks/observability/data/textfile/host-network.prom; do sleep 30; done
+python3 scripts/network_host_metrics.py --interface '<approved-host-nic>' \
+  --output stacks/observability/data/textfile/host-network.prom \
+  --samples 12 --interval-seconds 30
 ```
+
+引数なしの回数は従来どおり1回です。`--samples`は1〜120、`--interval-seconds`は5〜60に限定し、常駐サービスやtimerを追加しません。読取り・検証・保存に失敗したら以後の収集を止め、正常値や最新日時で取り繕いません。直前の成功snapshotは残りますが、更新停止から120秒以上経過すると既存NICパネルの鮮度条件で非表示になります。継続運用の方式は短時間検証の結果と必要権限を確認してから別途決めます。
 
 最初のscrape後、`lab_host_network_snapshot_timestamp_seconds`と各counterを確認。最低5分動かし、Grafanaの`Home network / NUC host metrics (not whole-home traffic)`をSSH tunnelで開きます。
 ホストの`/proc/net/dev`との数値比較、対象NICのみ、bytes/s、エラー/ドロップ、CPU/メモリ、snapshot ageを確認。
