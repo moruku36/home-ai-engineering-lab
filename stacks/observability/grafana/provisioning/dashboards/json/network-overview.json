@@ -2,7 +2,7 @@
   "uid": "home-network-overview",
   "title": "NUC host metrics (not whole-home traffic)",
   "schemaVersion": 39,
-  "version": 1,
+  "version": 2,
   "refresh": "30s",
   "time": {
     "from": "now-1h",
@@ -185,7 +185,7 @@
     },
     {
       "id": 7,
-      "title": "Host NIC errors / drops per second",
+      "title": "Host NIC errors + drops (RX + TX total/s)",
       "type": "timeseries",
       "datasource": "Prometheus",
       "gridPos": {
@@ -197,8 +197,8 @@
       "targets": [
         {
           "refId": "A",
-          "expr": "rate({__name__=~\"lab_host_network_(receive|transmit)_(errors|dropped)_total\",job=\"node\",device=~\"$device\"}[5m]) and on(job,instance) (time() - lab_host_network_snapshot_timestamp_seconds{job=\"node\"} < 120)",
-          "legendFormat": "{{device}} {{__name__}}"
+          "expr": "(rate(lab_host_network_receive_errors_total{job=\"node\",device=~\"$device\"}[5m]) + rate(lab_host_network_receive_dropped_total{job=\"node\",device=~\"$device\"}[5m]) + rate(lab_host_network_transmit_errors_total{job=\"node\",device=~\"$device\"}[5m]) + rate(lab_host_network_transmit_dropped_total{job=\"node\",device=~\"$device\"}[5m])) and on(job,instance) (time() - lab_host_network_snapshot_timestamp_seconds{job=\"node\"} < 120)",
+          "legendFormat": "{{device}} RX + TX errors + drops (total)"
         }
       ],
       "fieldConfig": {
@@ -206,7 +206,8 @@
           "unit": "ops"
         },
         "overrides": []
-      }
+      },
+      "description": "Sum of RX/TX error and drop counter rates per selected NIC. Counters may overlap; this is not a unique-packet count."
     }
   ]
 }
