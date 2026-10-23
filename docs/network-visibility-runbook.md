@@ -1,6 +1,6 @@
 # Network visibility Phase 1・2 — implementation / 検証手順
 
-[概要と承認境界](network-visibility.md)。今回のコードは未deploy。下記のホスト変更・DNS起動は実機の現状確認と承認後に行います。
+[概要と承認境界](network-visibility.md)。コードはmain反映済みですが、今回のPhase 1・2の実機適用は未確認です。[最新の照合結果と本人確認の範囲](build-progress.md#network-runtime-status)を参照。下記のホスト変更・DNS起動は実機の現状確認と対象操作の承認範囲を確認してから行います。
 既存サービスを止めず、Phase 1のホストメトリクスとPhase 2のDNS試験を分けます。
 
 ## 1. 手元でできる模擬試験
@@ -121,12 +121,12 @@ query logをローカルのGit管理外ファイルに保存し、`network_repor
 | 項目 | 状態 |
 |---|---|
 | 概要文書を先にGitHub公開 | PR #14の最初のcommit `23c2f73` |
-| コード・ダッシュボード・DNS Compose雛形 | PR上の実装。自動deployしない |
+| コード・ダッシュボード・DNS Compose雛形 | mainに反映済み。PR #25の静的検証追加もマージ済み。自動deployしない |
 | ホストcounter/対象限定/失敗時の振舞い、DNS集計・時刻・HTML escape | 合成データのunit testで検証（結果はPR） |
 | ダッシュボードJSON・exporter出力・Prometheus/Grafana設定・Composeの名前/パス整合 | 静的テストで検証（ファイルのみ。実機表示は別） |
 | NUC実接続・現在の作業ツリー/NIC確認 | 既存agentで読み取り確認済み。上記の結果参照。適用直前に再確認する |
 | Docker Compose構成検証 / AdGuard image起動 | 両Composeのconfigは[Linux CIで成功](https://github.com/moruku36/home-ai-engineering-lab/actions/runs/38719281759)。実機でのimage起動は未実施 |
-| NUC上の収集・稼働、Grafanaブラウザ表示 | 未実施。実機確認後に記録する |
+| NUC上のPhase 1収集・新規ダッシュボード表示 | 未確認。既存コンテナ稼働・Grafanaログインの本人確認と、GUIでのPrometheus既定登録／ダッシュボード未作成の確認は[構築進捗 §0.6](build-progress.md#network-runtime-status)参照。snapshot更新・設定適用・パネル表示の証拠とは分ける |
 | 家庭端末一覧の自動取得、ルータflow、Phase 3・4 | 未実装。範囲・機器確認または将来作業 |
 
 READMEの既存稼働実績は過去の記録であり、今回再検証したという意味ではありません。
