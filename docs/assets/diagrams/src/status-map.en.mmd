@@ -1,0 +1,37 @@
+flowchart LR
+  subgraph core[Always-on automation]
+    direction TB
+    n8n[n8n<br/>schedule 07:00 JST]:::part
+    pj[python-jobs<br/>GitHub collector]:::ok
+    rep[(Daily report)]:::ok
+    mcp[MCP read-only]:::ok
+    kuma[Uptime Kuma<br/>detection done<br/>no notification]:::part
+    n8n --> pj --> rep --> mcp
+    pj --> kuma
+  end
+  subgraph safety[Safety net]
+    direction TB
+    bk[Encrypted backup<br/>NUC only]:::part
+    hb[External heartbeat<br/>not enabled]:::todo
+  end
+  subgraph lab[Experiments]
+    direction TB
+    pg[Prometheus + Grafana<br/>running, scrape OK]:::ok
+    kind[kind cluster<br/>starts, no workloads]:::part
+    nv[Network visibility<br/>in progress, unverified]:::part
+    vm[Analysis VM<br/>A: conditional<br/>B: not accepted]:::part
+    gpu[Local GPU analysis<br/>design only]:::off
+    kyv[Kyverno<br/>design only]:::off
+  end
+  subgraph legend[Legend]
+    direction TB
+    l1[Verified on the NUC]:::ok
+    l2[Partly verified]:::part
+    l3[Not done / not set]:::todo
+    l4[Design only / parked]:::off
+  end
+  classDef ok fill:#e8f4ed,stroke:#43825a,color:#153d25
+  classDef part fill:#fff0dc,stroke:#b7791f,color:#633d0b
+  classDef todo fill:#fce8e6,stroke:#b94a48,color:#701e1c
+  classDef off fill:#f1f3f5,stroke:#7b8794,color:#344054
+  classDef ext fill:#e7eefc,stroke:#4a6fb5,color:#16305f

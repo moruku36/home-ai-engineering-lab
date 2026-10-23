@@ -1,0 +1,13 @@
+flowchart TB
+  host[NUC host metrics]:::part --> node[node_exporter]:::ok
+  node --> prom[Existing Prometheus]:::ok
+  prom --> graf[Existing Grafana via SSH]:::ok
+  inv[Owner-approved<br/>manual inventory]:::part --> rep[Local inventory / DNS report]:::part
+  test[Consenting test client only]:::off -.->|approval required| dns[Optional AdGuard Home trial]:::off
+  dns -.->|query log export| rep
+  router[Router model / flow support unknown]:::off -.->|future decision| rep
+  classDef ok fill:#e8f4ed,stroke:#43825a,color:#153d25
+  classDef part fill:#fff0dc,stroke:#b7791f,color:#633d0b
+  classDef todo fill:#fce8e6,stroke:#b94a48,color:#701e1c
+  classDef off fill:#f1f3f5,stroke:#7b8794,color:#344054
+  classDef ext fill:#e7eefc,stroke:#4a6fb5,color:#16305f

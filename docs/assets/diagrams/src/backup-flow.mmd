@@ -1,0 +1,13 @@
+flowchart TB
+  t[systemd timer<br/>03:30 UTC / 12:30 JST]:::ok --> s[Stop only running stacks]:::ok
+  s --> a[Archive volumes<br/>+ compose + .env]:::ok
+  a --> e[age encryption<br/>public key only]:::ok
+  e --> l[(/var/backups/home-ai-lab<br/>7 generations)]:::ok
+  l --> r[Restore test<br/>decrypt, verify, boot]:::ok
+  l -.->|NOT DONE| o[(Off-device copy<br/>undecided)]:::todo
+  k[Private key<br/>kept off the NUC]:::ext -.-> r
+  classDef ok fill:#e8f4ed,stroke:#43825a,color:#153d25
+  classDef part fill:#fff0dc,stroke:#b7791f,color:#633d0b
+  classDef todo fill:#fce8e6,stroke:#b94a48,color:#701e1c
+  classDef off fill:#f1f3f5,stroke:#7b8794,color:#344054
+  classDef ext fill:#e7eefc,stroke:#4a6fb5,color:#16305f

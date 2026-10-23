@@ -1,0 +1,34 @@
+flowchart TB
+  pc[Your PC<br/>Browser + SSH key]:::ext
+  ufw{{UFW: only TCP 22 from LAN<br/>UIs bind to 127.0.0.1}}:::ok
+  pc ==>|SSH tunnel| ufw
+  subgraph auto[Automation and reports]
+    direction TB
+    n8n[n8n :5678]:::ok
+    pj[python-jobs<br/>no published port]:::ok
+    rep[(Reports + snapshots)]:::ok
+    mcp[MCP server<br/>no published port]:::ok
+    kuma[Uptime Kuma :3001]:::ok
+    n8n -->|07:00 JST| pj
+    pj --> rep
+    rep -->|read-only| mcp
+    pj -->|push up/down| kuma
+  end
+  subgraph play[OSS playground]
+    direction TB
+    graf[Grafana :3000]:::ok
+    prom[Prometheus :9090]:::ok
+    node[node-exporter]:::ok
+    graf --> prom --> node
+  end
+  ufw ==> n8n
+  ufw ==> graf
+  pj -->|HTTPS GET| gh[GitHub REST API]:::ext
+  rep -.-> bk[(Encrypted backup<br/>NUC only)]:::part
+  kuma -.->|not enabled| hc[External heartbeat]:::todo
+  owui[Open WebUI<br/>stopped, data kept]:::off
+  classDef ok fill:#e8f4ed,stroke:#43825a,color:#153d25
+  classDef part fill:#fff0dc,stroke:#b7791f,color:#633d0b
+  classDef todo fill:#fce8e6,stroke:#b94a48,color:#701e1c
+  classDef off fill:#f1f3f5,stroke:#7b8794,color:#344054
+  classDef ext fill:#e7eefc,stroke:#4a6fb5,color:#16305f

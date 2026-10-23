@@ -1,0 +1,11 @@
+sequenceDiagram
+  participant C as n8n
+  participant M as MCP server
+  participant R as Reports (read-only)
+  participant A as Audit log
+  C->>M: tools/call (bearer token)
+  M->>M: auth, rate limit, allowlist
+  M->>R: read report (validated name)
+  R-->>M: text, max 64 KiB
+  M->>A: one JSON line, no secrets
+  M-->>C: result

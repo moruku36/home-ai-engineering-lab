@@ -1,0 +1,14 @@
+flowchart TB
+  t[n8n 07:00 JST<br/>or manual run]:::part --> j[python-jobs<br/>github-dev-snapshot]:::ok
+  j -->|read-only GET| g[GitHub REST API]:::ext
+  j --> r[(reports volume<br/>github-daily-DATE.md<br/>github-daily-latest.md)]:::ok
+  j --> s[(state volume<br/>JSON snapshots)]:::ok
+  j -->|push up/down| k[Uptime Kuma push monitor]:::part
+  k -.->|channel not configured| u[You: e-mail etc.]:::todo
+  r -->|read-only mount| m[MCP server<br/>list_reports / read_report]:::ok
+  m --> c[n8n / AI clients]:::ok
+  classDef ok fill:#e8f4ed,stroke:#43825a,color:#153d25
+  classDef part fill:#fff0dc,stroke:#b7791f,color:#633d0b
+  classDef todo fill:#fce8e6,stroke:#b94a48,color:#701e1c
+  classDef off fill:#f1f3f5,stroke:#7b8794,color:#344054
+  classDef ext fill:#e7eefc,stroke:#4a6fb5,color:#16305f

@@ -1,7 +1,7 @@
 # Architecture / アーキテクチャ
 
-English first, Japanese below each section. Reflects the deployed state on 2026-10-15; section 2b adds the OSS playground (partly deployed).
-各節は英語が先、日本語が後です。2026-10-15 時点の実機の状態を反映しています。
+English first, Japanese below each section. Reflects the deployed state recorded up to 2026-10-23. All diagrams are SVG files drawn with [Pele](https://pele.run/) from the sources in [assets/diagrams](assets/diagrams/README.md).
+各節は英語が先、日本語が後です。2026-10-23 までに記録された実機の状態を反映しています。図はすべて [Pele](https://pele.run/) で描いた SVG です（ソースは [assets/diagrams](assets/diagrams/README.md)）。
 
 ## 1. Roles / 役割分担
 
@@ -14,105 +14,22 @@ English first, Japanese below each section. Reflects the deployed state on 2026-
 
 ## 2. System overview / システム全体図
 
-```mermaid
-flowchart LR
-  subgraph PC["Your PC"]
-    BR["Browser"]
-    SSH["SSH client (key auth)"]
-  end
+![System overview: PC reaches the NUC through an SSH tunnel; automation stack, OSS playground, GitHub, backup and heartbeat](assets/diagrams/system-overview.svg)
 
-  subgraph NUC["NUC · Ubuntu Server 24.04 · Docker Compose"]
-    direction TB
-    UFW{{"UFW: only TCP 22 from the LAN"}}
-    subgraph UI["Loopback-only UIs (127.0.0.1)"]
-      KUMA["Uptime Kuma :3001"]
-      N8N["n8n :5678"]
-    end
-    subgraph INT["Internal only (no published ports)"]
-      PJ["python-jobs<br/>GitHub collector"]
-      MCP["MCP server"]
-    end
-    RPT[("Reports + snapshots")]
-    BK[("/var/backups/home-ai-lab<br/>age-encrypted")]
-    OWUI["Open WebUI<br/>stopped, data kept"]
-  end
-
-  GH["GitHub REST API (read-only GET)"]
-  HC["Free external heartbeat check (optional)"]
-  YOU["You (e-mail etc.)"]
-
-  BR -.-> SSH
-  SSH ==> UFW
-  UFW ==> UI
-  N8N -->|"07:00 JST"| PJ
-  PJ -->|"HTTPS GET"| GH
-  PJ --> RPT
-  RPT -->|"read-only"| MCP
-  N8N --> MCP
-  PJ -->|"push up / down"| KUMA
-  KUMA -.->|"health checks"| N8N
-  KUMA -.->|"health checks"| MCP
-  KUMA -.->|"channel you configure"| YOU
-  NUC -.->|"outbound ping every 5 min"| HC
-  HC -.->|"alert if pings stop"| YOU
-  NUC -.-> BK
-```
 
 **EN:** You reach the UIs only through an SSH tunnel. Services nobody opens in a browser (python-jobs, MCP) publish no port at all. The only outbound traffic is the GitHub API, the optional heartbeat, and image pulls.
 **JA:** 画面付きサービスには SSH トンネル経由でのみ入ります。ブラウザで開かないもの（python-jobs、MCP）はポート自体を公開しません。外向き通信は GitHub API、任意の heartbeat、イメージ取得のみです。
 
-## 2b. Current lab with the OSS playground / 現在のラボ全体図（OSSプレイグラウンド込み）
+## 2b. OSS playground status / OSSプレイグラウンドの現状
 
-```mermaid
-flowchart LR
-  subgraph PC["Your PC"]
-    BR["Browser"]
-    SSH["SSH client (key auth)"]
-  end
-
-  subgraph NUC["NUC · Ubuntu Server 24.04 · Docker · LAN only (TCP 22 only)"]
-    direction TB
-    subgraph OPS["Always-on automation and monitoring (stacks/uptime-kuma, n8n, mcp)"]
-      KUMA["Uptime Kuma :3001"]
-      N8N["n8n :5678"]
-      PJ["python-jobs"]
-      MCP["MCP server (internal)"]
-    end
-    subgraph PLAY["OSS playground (stacks/observability, kubernetes)"]
-      PROM["Prometheus :9090"]
-      GRAF["Grafana :3000"]
-      NODE["node-exporter (no published port)"]
-      KIND["Kubernetes (kind)<br/>API 127.0.0.1:6443<br/>NOT RUN YET"]
-      KYV["Kyverno<br/>DESIGN ONLY"]
-    end
-    OWUI["Open WebUI<br/>stopped, data kept"]
-    BK[("Encrypted backup<br/>ops stacks only")]
-  end
-
-  GH["GitHub REST API (read-only)"]
-
-  BR -.-> SSH
-  SSH ==>|"TCP 22 + SSH tunnels to 127.0.0.1 UIs"| NUC
-  N8N -->|"07:00 JST"| PJ
-  PJ -->|"HTTPS GET"| GH
-  N8N --> MCP
-  PJ -->|"push up/down"| KUMA
-  KUMA -.->|"health checks (monitor-net)"| N8N
-  PROM -->|"scrape"| NODE
-  PROM -->|"scrape"| GRAF
-  PROM -->|"scrape itself"| PROM
-  GRAF -->|"datasource"| PROM
-  KIND --> KYV
-  KIND -.->|"planned: metrics path (design option A)"| PROM
-  OPS -.-> BK
-```
+The playground is the right-hand group in the diagram above. / 上の図の右側のグループがプレイグラウンドです。
 
 | Product | Role | Status (see [build-progress.md](build-progress.md)) |
 |---|---|---|
 | Uptime Kuma | alerts, health checks | running (ops stack) |
-| Prometheus | metrics | started on the NUC; UI on loopback only; scrape targets not yet verified |
-| Grafana OSS | dashboards | started on the NUC; UI login and datasource not yet verified |
-| Kubernetes (kind) | throw-away cluster | defined, **not run** |
+| Prometheus | metrics | running; UI on loopback only; all three scrape targets `up` (verified) |
+| Grafana OSS | dashboards | running; login and a query through the Prometheus data source verified by API; browser dashboards not tried |
+| Kubernetes (kind) | throw-away cluster | 2 nodes `Ready`, API on `127.0.0.1:6443` only; no workloads yet |
 | Kyverno | admission policies | **design only**: [playground-kyverno-design.md](playground-kyverno-design.md) |
 
 **EN:** The playground stack has its own network `172.33.0.0/24` and also joins `monitor-net`, so Kuma can probe it by name. Its volumes are **not** in the encrypted backup yet. Playground work (usage notes, vulnerability checks, fixes) is documented in [playground.md](playground.md) and `docs/playground/<product>.md`.
@@ -120,22 +37,8 @@ flowchart LR
 
 ## 3. Networks and exposure / ネットワークと公開範囲
 
-```mermaid
-flowchart LR
-  KUMA["Uptime Kuma"]
-  N8N["n8n"]
-  OWUI["Open WebUI"]
-  PJ["python-jobs"]
-  MCP["MCP server"]
+![Docker networks: monitor-net, mcp-net, n8n_internal and the Kuma default network, with their members](assets/diagrams/networks.svg)
 
-  KUMA ---|"monitor-net 172.31.0.0/24"| N8N
-  KUMA ---|"monitor-net"| PJ
-  KUMA ---|"monitor-net (stopped)"| OWUI
-  KUMA ---|"mcp-net 172.32.0.0/24 (internal)"| MCP
-  N8N ---|"mcp-net"| MCP
-  OWUI ---|"mcp-net"| MCP
-  N8N ---|"n8n_internal"| PJ
-```
 
 | Network | Members | Purpose / 目的 |
 |---|---|---|
@@ -155,39 +58,14 @@ Checked on the live NUC / 実機で確認済み:
 
 ### 4.1 Daily GitHub report / GitHub日次レポート
 
-```mermaid
-sequenceDiagram
-  participant S as n8n schedule 07:00 JST
-  participant P as python-jobs
-  participant G as GitHub API
-  participant R as Reports + snapshots
-  participant K as Uptime Kuma
-  S->>P: POST /jobs/github-dev-snapshot (bearer token)
-  P->>G: list repos (2 calls) + search open issues and PRs (2 calls)
-  P->>G: per active repo: Actions runs, last commit (budget-limited)
-  G-->>P: JSON (read-only GET only)
-  P->>P: diff vs previous snapshot, derive alerts, keep fuller report of the day
-  P->>R: github-daily-DATE.md, github-daily-latest.md, snapshot JSON
-  P->>K: push up (OK) or down (critical alert / collector error)
-  P-->>S: summary counts
-```
+![Daily report sequence: n8n, python-jobs, GitHub API, reports and Uptime Kuma](assets/diagrams/report-sequence.svg)
+
 If nothing is pushed for 26 h, Kuma marks the push monitor `down` itself. / 26時間 heartbeat がなければ Kuma が自分で `down` にします。
 
 ### 4.2 MCP tool call (works from n8n) / MCPツール呼び出し（n8nから動作）
 
-```mermaid
-sequenceDiagram
-  participant C as n8n or Open WebUI
-  participant M as MCP server
-  participant R as Reports volume (read-only)
-  participant A as Audit log
-  C->>M: POST /mcp tools/call (bearer token)
-  M->>M: authenticate, rate-limit, check tool allowlist
-  M->>R: read report (name validated, inside directory only)
-  R-->>M: text (max 64 KiB)
-  M->>A: one JSON line (client, tool, status, args hash - no secrets)
-  M-->>C: result
-```
+![MCP tool call sequence: authenticate, rate-limit, allowlist, read report, write audit line](assets/diagrams/mcp-sequence.svg)
+
 The n8n workflow *MCP read-only test* lists the reports and reads the latest one (verified). Open WebUI → MCP is **parked**. / n8n の「MCP read-only test」で一覧取得と最新レポートの読み取りを確認済み。Open WebUI→MCP は**保留**。
 
 ### 4.3 Chat with a cloud LLM — parked / クラウドLLMとのチャット（保留中）
@@ -197,16 +75,8 @@ The n8n workflow *MCP read-only test* lists the reports and reads the latest one
 
 ## 5. Backup and recovery / バックアップと復旧
 
-```mermaid
-flowchart LR
-  T["systemd timer<br/>daily 03:30 UTC (12:30 JST)"] --> S["Stop services briefly"]
-  S --> A["Archive volumes + compose + .env"]
-  A --> E["age encryption<br/>(public key only)"]
-  E --> L[("/var/backups/home-ai-lab<br/>7 generations + sha256")]
-  L --> R["Restore test<br/>(decrypt, verify, boot throwaway copies)"]
-  K["Private key<br/>kept OFF the NUC by you"] -.-> R
-  L -.->|"NOT DONE"| O[("Off-device storage<br/>destination undecided")]
-```
+![Backup flow: systemd timer, archive, age encryption, local storage, restore test; off-device copy not done](assets/diagrams/backup-flow.svg)
+
 
 - **EN:** The NUC can create backups but cannot decrypt them without the private key you hold elsewhere. A restore test (Kuma, n8n, Open WebUI, MCP audit) passed on the live NUC. **Backups still live only on the NUC**, so a dead disk loses them.
 - **JA:** NUCは暗号化バックアップを作れますが、別に保管した秘密鍵がなければ復号できません。実機で復元試験（Kuma・n8n・Open WebUI・MCP監査ログ）に合格しています。**バックアップはまだNUC内にしかなく**、ディスク故障で失われます。

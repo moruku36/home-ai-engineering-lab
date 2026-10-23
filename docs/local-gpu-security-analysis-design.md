@@ -41,47 +41,8 @@
 
 ## 3. システムアーキテクチャとデータフロー (System Architecture)
 
-```mermaid
-flowchart TD
-  subgraph NUC["Intel NUC (Ubuntu Server 24.04 - 常に稼働)"]
-    direction TB
-    LOGS["ホスト & コンテナ ログ<br/>(/var/log/syslog, auth, docker)"]
+![Local GPU security log pipeline: six NUC stages, inference queue, Windows Ollama behind a tunnel, fallback report (design only)](assets/diagrams/local-gpu-pipeline.svg)
 
-    subgraph Pipeline["Security Log Pipeline (Python Worker)"]
-      PRE["1. UTC正規化<br/>(ISO 8601 UTC)"]
-      RED["2. 秘密・個人情報マスク<br/>(トークン/パスワード/鍵/IP)"]
-      RULE["3. 決定論的ルール検知<br/>(SSH攻撃/sudo失敗/不正指示)"]
-      DEDUP["4. 重複集約・ハッシュ付与<br/>(SHA-256 8文字/件数集計)"]
-      CHUNK["5. Bounded 分割<br/>(最大100行/8000文字)"]
-      VAL["6. 厳格検証<br/>(JSON Schema + 偽証拠拒否)"]
-    end
-
-    LOGS --> PRE --> RED --> RULE --> DEDUP --> CHUNK
-
-    subgraph QueueControl["推論制御・フォールバック"]
-      QUEUE["単一推論キュー (Concurrency=1)<br/>タイムアウト 120s / リトライ 2回"]
-      FALLBACK["Windows停止時フォールバック<br/>(LLM保留 + ルール検知レポートのみ生成)"]
-    end
-
-    CHUNK --> QUEUE
-    QUEUE -. "Windows稼働時" .-> TUNNEL
-    QUEUE -. "Windows停止/Timeout時" .-> FALLBACK --> REPORT
-
-    REPORT[("セキュリティ評価レポート<br/>Markdown & JSON<br/>(volume: security-reports)")]
-    VAL --> REPORT
-  end
-
-  subgraph AuthChannel["安全な通信境界 (設計のみ)"]
-    TUNNEL["SSH Reverse Tunnel または<br/>認証トークン付きTLSリバースプロキシ<br/>(LANへの11434生公開は絶対禁止)"]
-  end
-
-  subgraph WIN["Windows 11 (RTX 3070 8GB - スリープ/シャットダウンあり)"]
-    OLLAMA["Ollama 0.40.5 (127.0.0.1:11434)<br/>huihui_ai/qwen3-abliterated:8b<br/>(Runtime Context: 8192-10240)"]
-  end
-
-  TUNNEL --> OLLAMA
-  OLLAMA --> VAL
-```
 
 ---
 

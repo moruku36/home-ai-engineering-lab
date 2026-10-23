@@ -1,0 +1,13 @@
+flowchart TB
+  rpt[セキュリティレポート確認]:::off --> chk{needs_human_review<br/>= true ?}
+  chk -->|No| log[ログ保存・経過観察]:::ok
+  chk -->|Yes| sev{Severity}
+  sev -->|high / critical<br/>SSH攻撃・インジェクション| aud[① 証拠行と生ログを突き合わせ<br/>② UFW・SSH設定を確認<br/>③ 必要ならIPを手動遮断]:::todo
+  sev -->|medium / low<br/>sudo失敗・不審アクセス| usr[担当ユーザーに確認<br/>誤入力か判断]:::part
+  aud --> doc[調査結果を記録に残す]:::ok
+  usr --> doc
+  classDef ok fill:#e8f4ed,stroke:#43825a,color:#153d25
+  classDef part fill:#fff0dc,stroke:#b7791f,color:#633d0b
+  classDef todo fill:#fce8e6,stroke:#b94a48,color:#701e1c
+  classDef off fill:#f1f3f5,stroke:#7b8794,color:#344054
+  classDef ext fill:#e7eefc,stroke:#4a6fb5,color:#16305f

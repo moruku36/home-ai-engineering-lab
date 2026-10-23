@@ -1,0 +1,14 @@
+sequenceDiagram
+  participant S as n8n 07:00 JST
+  participant P as python-jobs
+  participant G as GitHub API
+  participant R as Reports
+  participant K as Uptime Kuma
+  S->>P: POST /jobs/github-dev-snapshot
+  P->>G: repos + open issues/PRs (4 calls)
+  P->>G: per active repo: Actions, last commit
+  G-->>P: JSON (GET only)
+  P->>P: diff, alerts, keep fuller report of the day
+  P->>R: dated .md, latest.md, snapshot JSON
+  P->>K: push up or down
+  P-->>S: summary counts

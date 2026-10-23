@@ -1,0 +1,25 @@
+flowchart TB
+  subgraph a[1. 作業用Windows PC]
+    a1[RufusでUSB書き込み]:::ok --> a2[USBを安全に取り外す]:::ok
+  end
+  subgraph b[2. NUCの配線]
+    b1[有線LAN・HDMI・キーボード・USBを接続]:::ok --> b2[電源を入れる]:::ok
+  end
+  subgraph c[3. インストール]
+    c1[F10連打でBoot Menu]:::ok --> c2[USBから起動]:::ok
+    c2 --> c3[ストレージ全消去<br/>ESXiを削除]:::part
+    c3 --> c4[OpenSSH Serverを有効化]:::ok
+    c4 --> c5[USBを抜いて再起動]:::ok
+  end
+  subgraph d[4. 宅内接続確認]
+    d1[NUC画面でIPを確認]:::ok --> d2[WindowsからSSH接続]:::ok
+    d2 --> d3[モニター・キーボードを外し<br/>ヘッドレス運用へ]:::ok
+  end
+  a2 --> b1
+  b2 --> c1
+  c5 --> d1
+  classDef ok fill:#e8f4ed,stroke:#43825a,color:#153d25
+  classDef part fill:#fff0dc,stroke:#b7791f,color:#633d0b
+  classDef todo fill:#fce8e6,stroke:#b94a48,color:#701e1c
+  classDef off fill:#f1f3f5,stroke:#7b8794,color:#344054
+  classDef ext fill:#e7eefc,stroke:#4a6fb5,color:#16305f

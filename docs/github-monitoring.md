@@ -8,17 +8,8 @@ English first, Japanese below each section. Status as of 2026-10-15. / 各節は
 
 **JA:** 毎朝 **07:00 JST** に、n8n の「GitHub daily report (read-only)」が `python-jobs` に依頼し、`moruku36` の全リポジトリの状況を読み取り、前回との差分を取り、NUC 上に Markdown レポートを保存します。GitHub への書き込みは一切ありません（`GET` のみ）。LLM も有料 API も使いません。
 
-```mermaid
-flowchart LR
-  T["n8n schedule 07:00 JST<br/>or manual run"] --> J["python-jobs<br/>github-dev-snapshot"]
-  J -->|"read-only GET"| G["GitHub REST API<br/>owner moruku36 only"]
-  J --> R[("reports volume<br/>github-daily-YYYY-MM-DD.md<br/>github-daily-latest.md")]
-  J --> S[("state volume<br/>JSON snapshots + alert state")]
-  J -->|"push up / down"| K["Uptime Kuma<br/>push monitor"]
-  K -.->|"notification channel<br/>(you configure)"| U["You: e-mail etc."]
-  R -->|"read-only mount"| M["MCP server<br/>list_reports / read_report"]
-  M --> C["n8n / AI clients"]
-```
+![GitHub daily report flow: n8n, python-jobs, GitHub API, report and state volumes, Kuma push monitor, MCP](assets/diagrams/github-report-flow.svg)
+
 
 ## 2. What the report contains / レポートの内容
 

@@ -2,32 +2,75 @@
 
 **English** | [日本語](README.ja.md)
 
-A home Intel NUC lab for GitHub automation, monitoring and hands-on OSS experiments. The always-on platform uses Ubuntu Server and Docker Compose; a separate QEMU/KVM guest provides an offline security-analysis workspace.
+A home Intel NUC lab for GitHub automation, monitoring and hands-on OSS experiments. The always-on platform runs on Ubuntu Server and Docker Compose; a separate QEMU/KVM guest provides an offline security-analysis workspace.
 
-The automation platform does not run an LLM or use paid LLM APIs. Open WebUI is intentionally stopped with its data retained. No additional paid service has been introduced (electricity and existing subscriptions excluded).
+No LLM runs on the automation platform and no paid LLM API is used. Open WebUI is stopped on purpose with its data kept. No additional paid service has been introduced (electricity and existing subscriptions excluded).
 
-**Start here:** [Capabilities and status](#capabilities-and-status) · [Use the lab](#use-the-lab) · [Build or develop](#build-or-develop) · [Documentation index](docs/README.md)
+**Start here:** [Status at a glance](#status-at-a-glance) · [What works / what does not](#what-works-today) · [Roadmap](#roadmap) · [Architecture](#architecture) · [Use the lab](#use-the-lab) · [Build or develop](#build-or-develop) · [Documentation index](docs/README.md)
 
-## Capabilities and status
+## Status at a glance
 
-Based on repository code and recorded verification as of **2026-10-20 JST**, not a fresh check of the live NUC. Implementation, deployment and acceptance are separate milestones.
+Written from the repository code and recorded verification, **as of 2026-10-23 JST**. The live NUC was not re-checked for this update. Implementation, deployment and acceptance are separate milestones; "implemented" never means "verified on the NUC".
 
-| Area | Available functionality | Recorded status / remaining gap |
+![Status map: green = verified on the NUC, amber = partly verified, red = not done, grey = design only or parked](docs/assets/diagrams/status-map.en.svg)
+
+## What works today
+
+Verified on the NUC and recorded in the docs.
+
+- **Daily GitHub report.** n8n → `python-jobs` → Markdown/JSON report. A manual run from the n8n screen succeeded (109 repositories). Without a GitHub token the API budget is small, so the report is marked `PARTIAL`. [Details](docs/github-monitoring.md)
+- **Read-only MCP.** n8n lists and reads saved reports through an authenticated, audited MCP server. [Details](docs/mcp-internal-api.md)
+- **Monitoring.** Uptime Kuma watches SSH, n8n, MCP and the collector; a failure is detected. [Details](docs/monitoring-notifications.md)
+- **Backup and restore.** Manual encrypted backup and a restore test passed. Open WebUI stays stopped after a backup. [Details](docs/backup-restore.md)
+- **Network exposure.** Only TCP 22 is open on the LAN (a scan of 1,051 ports found nothing else); every UI binds to `127.0.0.1` and is reached through SSH tunnels. [Details](docs/security-operations.md)
+- **OSS playground.** Prometheus, Grafana and node-exporter run with all scrape targets `up`; a Grafana query through the Prometheus data source works; a 2-node kind cluster starts and both nodes are `Ready`. [Details](docs/playground.md)
+- **Security-analysis VM, scope A.** NIC-less guest, read-only ISO transfer and basic Workbench operation are conditionally accepted by the owner. [Details](docs/security-analysis-vm.md)
+
+## Built, but not verified or not switched on
+
+Code or a design exists; the live evidence does not.
+
+| Item | What is missing |
+|---|---|
+| 07:00 JST scheduled report | The first scheduled run has not been observed and the live cause is unconfirmed. The source fix (publication failure surfaced, freshness detector) is **not deployed**. See [GitHub monitoring §11](docs/github-monitoring.md#11-scheduled-run-investigation-task-122-2026-10-18). |
+| Previous-day activity counts | PR opened/merged/closed and Issue counts are implemented and tested against a fake API only. Push-event and commit counts are not implemented. |
+| Failed-Actions alert | Proven only by fake-API tests; no real failure has been seen. |
+| Alert delivery | Detection works, but no Kuma notification channel or push token is set, and the external heartbeat is not enabled. |
+| Automatic backup | The first timer run has not been observed. |
+| MCP compatibility | Official-client / Inspector compatibility and live negative tests are unverified. |
+| Playground | Grafana dashboards in a browser and workloads on kind were never tried. |
+| [Network visibility](docs/network-visibility.md) | Phase 1–2 are implemented in the repository (metrics, manual inventory, dashboard definition, DNS-trial template); deployment and display are unverified. |
+| Security-analysis VM, scope B | REA → Ghidra analysis is **not accepted**; the original `FAIL` / `REPORT=UNVERIFIED` is retained. |
+| [Local GPU analysis](docs/local-gpu-security-analysis-design.md) | Inactive Phase 1 design with synthetic offline tests; no deployment and no GPU benchmark. |
+
+## Not done yet
+
+- **Off-device backup.** Backups live only on the NUC; the destination is undecided ([options](docs/offsite-backup-options.md)). The observability volumes are not in the encrypted backup.
+- **Token features.** Private repositories, Dependabot alerts and a larger API budget need a read-only GitHub token (untested).
+- **Workbench ↔ REA integration** (TASK-113) and any real scanner run.
+- **Kyverno** ([design only](docs/playground-kyverno-design.md)), IDS and blocking (network phases 3–4).
+- **Real LLM API connections.** Parked together with Open WebUI.
+
+## Roadmap
+
+The order follows the open items recorded in the docs; the owner decides priorities and approvals.
+
+| When | Item | Why / dependency |
 |---|---|---|
-| [GitHub daily report](docs/github-monitoring.md) | n8n → Python collector → Markdown/JSON; configured for 07:00 JST | Manual n8n execution verified. First scheduled run and its live failure cause unverified; source fix and freshness detector not deployed. |
-| [Previous-day activity](docs/github-monitoring.md) | PR opened/merged/closed counts, Issue counts, repositories whose latest push falls in the previous JST day | Implemented in source; see the guide for verification scope. Push-event and commit counts not implemented. API coverage and search-index delay limit figures. |
-| [Read-only MCP](docs/mcp-internal-api.md) | Authenticated, audited access to saved reports | Reading from n8n verified. Official client/Inspector compatibility and live negative tests unverified. |
-| [Monitoring and notifications](docs/monitoring-notifications.md) | Uptime Kuma checks, collector push monitor, optional external heartbeat | Detection verified; notification channel and push token not configured. External heartbeat not enabled. |
-| [Backup and restore](docs/backup-restore.md) | Encrypted local backup and restore test | Manual backup/restore verified. First automatic timer run unobserved; off-device copy missing. |
-| [OSS playground](docs/playground.md) | Prometheus, Grafana, node_exporter, two-node kind cluster | Startup, scrape targets, Grafana API query and kind readiness verified. Browser dashboards and kind workloads unverified; Kyverno is design only. |
-| [Network visibility](docs/network-visibility.md) | Host metrics, approved manual inventory, dashboard definition, limited DNS-trial template | Phase 1–2 implementation in progress; deployment/display unverified. IDS and blocking are future work. |
-| [Security-analysis VM](docs/security-analysis-vm.md) | NIC-less guest, read-only ISO transfer, independent Workbench and REA/Ghidra tools | Scope A (VM foundation/basic operations) conditionally owner-accepted. Scope B (REA → Ghidra analysis capability) not accepted; original `FAIL` / `REPORT=UNVERIFIED` retained. |
-| [Local GPU security analysis](docs/local-gpu-security-analysis-design.md) | Separate offline log preprocessing and optional LLM analysis design | Inactive Phase 1 proposal; synthetic validation only. No deployment or GPU benchmark. |
-| [Open WebUI](docs/ops-runbook.md#1-open-webui-stop--start) | Preserved chat UI stack | Intentionally stopped; data retained. Real LLM API connections unverified. |
-
-Detailed evidence: [build progress](docs/build-progress.md). Newer topic-specific records linked above take precedence over older build entries.
+| **Now** | Confirm the 07:00 JST run, then deploy the source fixes | Without it the daily report cannot be trusted. Production change: needs approval. |
+| **Now** | Add a Kuma notification channel and register the push URL | Turns detection into alerts you actually receive. Needs your credentials. |
+| **Now** | Decide an off-device backup destination | Today a dead disk loses every backup. |
+| Next | Enable the external heartbeat; optionally add a read-only GitHub token | Detects a dead NUC; widens report coverage. |
+| Next | Network visibility: deploy Phase 1–2 and capture browser evidence | Needs approval for any NIC or DNS change. |
+| Next | Playground: build a Grafana dashboard, run a workload on kind, add the volumes to backup | Turns "starts" into "used". |
+| Later | Kyverno on kind | Design is written; one PR per step. |
+| Later | Local GPU analysis: benchmark, then the deployment gates | Needs measurements first. |
+| Later | VM scope B acceptance and Workbench ↔ REA integration | Separate scope; not implied by scope A. |
+| Later | Exact push/commit counts via a webhook | Needs an inbound path; currently out of scope. |
 
 ## Architecture
+
+![System overview: PC to NUC through an SSH tunnel; automation and playground stacks; GitHub, backup and heartbeat](docs/assets/diagrams/system-overview.svg)
 
 | Layer | Components and boundary |
 |---|---|
@@ -35,10 +78,10 @@ Detailed evidence: [build progress](docs/build-progress.md). Newer topic-specifi
 | Automation | n8n calls internal `python-jobs`; the collector reads GitHub and saves reports/snapshots. |
 | Report access | n8n or a compatible client reads saved reports through the internal, read-only MCP server. |
 | Observability | Kuma checks services; Prometheus/node_exporter feed Grafana. The network-visibility extension is not deployment-verified. |
-| Recovery | Local `age`-encrypted backups; off-device destination undecided. Observability volumes are outside the existing encrypted backup. |
+| Recovery | Local `age`-encrypted backups; off-device destination undecided. |
 | Analysis | Separate QEMU/KVM guest with no virtual NIC. Workbench and REA are independent MCP servers; integration not implemented. |
 
-[System, network and backup diagrams](docs/architecture.md) · [VM architecture and acceptance boundaries](docs/security-analysis-vm.md)
+More diagrams: [data flows, networks and backup](docs/architecture.md) · [VM architecture and acceptance boundaries](docs/security-analysis-vm.md). All diagrams are SVG files rendered with [Pele](https://pele.run/); see [how to regenerate them](docs/assets/diagrams/README.md).
 
 ## Use the lab
 
@@ -78,15 +121,13 @@ Setup and operations scripts can modify the host; read their runbooks before exe
 |---|---|
 | [`stacks/`](stacks/) | Compose stacks, workflows, collector, MCP, observability and kind definitions |
 | [`scripts/`](scripts/) | Setup, operations, backup, heartbeat, network reports and secret scanning |
-| [`tests/`](tests/) | Offline collector, freshness, MCP and network-visibility checks |
-| [`docs/`](docs/README.md) | Design, topic runbooks, samples, progress and historical records |
+| [`tests/`](tests/) | Offline collector, freshness, MCP, network-visibility and log-pipeline checks |
+| [`docs/`](docs/README.md) | Design, topic runbooks, samples, progress, diagrams and historical records |
 
-## Operational priorities and boundaries
+## Boundaries
 
-- Verify the scheduled GitHub run and deploy source fixes using the investigation guide.
-- Configure notification delivery, collector push and optional external heartbeat; choose an [off-device backup destination](docs/offsite-backup-options.md).
-- Keep network-visibility and VM acceptance gaps explicit; code or limited tool output is not proof of deployed functionality.
 - Maintain SSH key-only access, loopback UIs and read-only collection. Never commit secrets, real LAN addresses, MACs or serial numbers. [Security operations](docs/security-operations.md).
+- Keep network-visibility and VM acceptance gaps explicit; code or limited tool output is not proof of deployed functionality.
 - External writes, credentials, paid services and network changes follow their documented approval boundaries.
 
 License: not yet specified.

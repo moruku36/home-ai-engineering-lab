@@ -1,0 +1,37 @@
+flowchart LR
+  subgraph core[常時稼働の自動化・監視]
+    direction TB
+    n8n[n8n<br/>定期実行 07:00 JST]:::part
+    pj[python-jobs<br/>GitHub収集]:::ok
+    rep[(日次レポート)]:::ok
+    mcp[MCP 読み取り専用]:::ok
+    kuma[Uptime Kuma<br/>検知は実装済み<br/>通知は未設定]:::part
+    n8n --> pj --> rep --> mcp
+    pj --> kuma
+  end
+  subgraph safety[守り]
+    direction TB
+    bk[暗号化バックアップ<br/>NUC内のみ]:::part
+    hb[外部 heartbeat<br/>未有効化]:::todo
+  end
+  subgraph lab[実験・拡張]
+    direction TB
+    pg[Prometheus + Grafana<br/>起動・scrape確認済み]:::ok
+    kind[kind クラスタ<br/>起動確認・負荷未投入]:::part
+    nv[ネットワーク可視化<br/>実装中・実機未検証]:::part
+    vm[解析VM<br/>A: 条件付き受入れ<br/>B: 未受入れ]:::part
+    gpu[ローカルGPU解析<br/>設計のみ]:::off
+    kyv[Kyverno<br/>設計のみ]:::off
+  end
+  subgraph legend[凡例]
+    direction TB
+    l1[実機で確認済み]:::ok
+    l2[一部のみ確認]:::part
+    l3[未着手・未設定]:::todo
+    l4[設計のみ・停止中]:::off
+  end
+  classDef ok fill:#e8f4ed,stroke:#43825a,color:#153d25
+  classDef part fill:#fff0dc,stroke:#b7791f,color:#633d0b
+  classDef todo fill:#fce8e6,stroke:#b94a48,color:#701e1c
+  classDef off fill:#f1f3f5,stroke:#7b8794,color:#344054
+  classDef ext fill:#e7eefc,stroke:#4a6fb5,color:#16305f

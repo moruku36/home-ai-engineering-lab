@@ -1,0 +1,26 @@
+flowchart TB
+  logs[ホスト・コンテナのログ<br/>syslog / auth / docker]:::off
+  subgraph pipe[NUC: セキュリティログ・パイプライン（設計のみ）]
+    p1[1. UTC正規化]:::off --> p2[2. 秘密・個人情報マスク]:::off
+    p2 --> p3[3. 決定論的ルール検知<br/>SSH攻撃 / sudo失敗 / 不正指示]:::off
+    p3 --> p4[4. 重複集約・ハッシュ付与]:::off
+    p4 --> p5[5. 分割 最大100行/8000文字]:::off
+    p5 --> q[単一推論キュー<br/>120秒タイムアウト / リトライ2回]:::off
+  end
+  p6[6. JSON Schema検証<br/>偽証拠を拒否]:::off
+  rep[(セキュリティ評価レポート<br/>Markdown + JSON)]:::off
+  tun[SSH逆トンネル または 認証付きTLSプロキシ<br/>11434のLAN生公開は禁止]:::part
+  subgraph win[Windows 11 RTX 3070 - 停止することがある]
+    oll[Ollama 127.0.0.1:11434<br/>qwen3 8B]:::ext
+  end
+  logs --> p1
+  q -.->|Windows稼働時| tun
+  tun --> oll
+  oll --> p6
+  p6 --> rep
+  q -.->|停止・タイムアウト時<br/>LLM保留でルール検知のみ| rep
+  classDef ok fill:#e8f4ed,stroke:#43825a,color:#153d25
+  classDef part fill:#fff0dc,stroke:#b7791f,color:#633d0b
+  classDef todo fill:#fce8e6,stroke:#b94a48,color:#701e1c
+  classDef off fill:#f1f3f5,stroke:#7b8794,color:#344054
+  classDef ext fill:#e7eefc,stroke:#4a6fb5,color:#16305f

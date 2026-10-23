@@ -23,16 +23,8 @@ DNSにはキャッシュ・直接IP接続・DoH/DoT等で見えない通信が�
 
 ## 最小構成と選定理由
 
-```mermaid
-flowchart LR
-  HOST[NUC host metrics] --> NODE[node_exporter]
-  NODE --> PROM[Existing Prometheus]
-  PROM --> GRAF[Existing Grafana via SSH]
-  INV[Owner-approved manual inventory] --> REPORT[Local inventory / DNS report]
-  TEST[Consenting test client only] -. approval required .-> DNS[Optional AdGuard Home trial]
-  DNS -. query log export .-> REPORT
-  ROUTER[Router model / flow support unknown] -. future decision .-> REPORT
-```
+![Network visibility minimal setup: host metrics to Grafana, manual inventory, optional DNS trial, router flow unknown](assets/diagrams/network-visibility.svg)
+
 
 - **Prometheus / node_exporter**: 既に導入済みで再利用できる数値監視基盤。パケット解析器としては扱わない。Apache-2.0。
 - **Grafana OSS**: 既存のPrometheusデータソースを再利用し、用途を限定したダッシュボードを追加。AGPL-3.0。

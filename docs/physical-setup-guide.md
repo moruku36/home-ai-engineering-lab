@@ -7,32 +7,8 @@
 
 ## 全体フロー
 
-```mermaid
-flowchart TD
-    subgraph PC[1. 作業用Windows PC]
-        A[RufusでUSB書き込み完了] --> B[USBを安全に取り外す]
-    end
+![Physical setup flow: write USB on Windows, cable the NUC, install Ubuntu Server, confirm SSH from the home LAN](assets/diagrams/physical-setup.svg)
 
-    subgraph NUC_Phys[2. NUC物理配線]
-        B --> C[有線LAN・HDMI・USBキーボード・USBメモリを接続]
-        C --> D[電源ケーブル接続 & 電源ON]
-    end
-
-    subgraph Install[3. インストール作業]
-        D --> E["起動直後に F10 連打 (Boot Menu)"]
-        E --> F[UEFI USBメモリを選択して起動]
-        F --> G["Ubuntu Server インストーラー起動"]
-        G --> H["ストレージ設定: 全消去 (ESXi削除)"]
-        H --> I["OpenSSH Server を有効化 (必須)"]
-        I --> J[インストール完了 & USB抜去して再起動]
-    end
-
-    subgraph Connect[4. 宅内接続確認]
-        J --> K["NUC画面でIPアドレス確認 (例: 192.168.x.x)"]
-        K --> L[Windows PCのPowerShellからSSH接続]
-        L --> M["モニター・キーボードを外し、常設ヘッドレス運用へ"]
-    end
-```
 
 ---
 

@@ -1,0 +1,25 @@
+flowchart TB
+  mon[monitor-net<br/>172.31.0.0/24<br/>health checks by name]:::net
+  mcpn[mcp-net 172.32.0.0/24<br/>internal, no gateway]:::net
+  n8ni[n8n_internal<br/>job calls only]:::net
+  kuma[Uptime Kuma]:::ok
+  n8n[n8n]:::ok
+  pj[python-jobs]:::ok
+  mcp[MCP server]:::ok
+  owui[Open WebUI<br/>stopped]:::off
+  host[Host TCP 22<br/>only UFW exception]:::part
+  kuma --- mon
+  n8n --- mon
+  pj --- mon
+  owui --- mon
+  mcp --- mcpn
+  n8n --- mcpn
+  owui --- mcpn
+  kuma ---|/healthz only| mcpn
+  n8n --- n8ni
+  pj --- n8ni
+  kuma -.->|default route 172.30.0.0/24| host
+  classDef ok fill:#e8f4ed,stroke:#43825a,color:#153d25
+  classDef part fill:#fff0dc,stroke:#b7791f,color:#633d0b
+  classDef off fill:#f1f3f5,stroke:#7b8794,color:#344054
+  classDef net fill:#e7eefc,stroke:#4a6fb5,color:#16305f

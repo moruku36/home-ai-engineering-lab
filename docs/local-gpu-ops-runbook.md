@@ -42,18 +42,8 @@ Windows ホスト（GPU推論端末）は、夜間スリープや再起動、他
 
 パイプラインが出力したイベントのうち、`needs_human_review: true` の項目は以下の手順でトリアージします。
 
-```mermaid
-flowchart TD
-  RPT["セキュリティレポート確認"] --> CHK{"needs_human_review: true ?"}
-  CHK -- No --> LOG["ログ保存・経過観察"]
-  CHK -- Yes --> SEV{"Severity レベル"}
+![Human triage flow for security reports: needs_human_review, severity, manual checks, record the result](assets/diagrams/local-gpu-triage.svg)
 
-  SEV -- "high / critical<br/>(SSH攻撃・インジェクション)" --> AUDIT["1. Evidence Refs (証拠行) の生ログ突き合わせ<br/>2. UFW状態・SSH設定確認<br/>3. 必要に応じてIP手動遮断 (管理者が手動実行)"]
-  SEV -- "medium / low<br/>(sudo失敗・不審アクセス)" --> USER["担当ユーザーへのヒアリング<br/>誤入力の確認"]
-
-  AUDIT --> DOC["調査結果をチケット/記録に残す"]
-  USER --> DOC
-```
 
 > [!CAUTION]
 > **本パイプラインには OS 操作権限やファイアウォール変更権限はありません。**\

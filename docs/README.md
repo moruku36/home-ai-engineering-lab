@@ -12,9 +12,10 @@ READMEは言語別ページです。詳細資料は各資料の既存の言語�
 
 | Doc | Language | About / 内容 |
 |---|---|---|
-| [English README](../README.md) · [日本語 README](../README.ja.md) | EN / JA | What the lab is, what it can do, architecture, status / 全体像・できること・構成図・状態 |
+| [English README](../README.md) · [日本語 README](../README.ja.md) | EN / JA | What works, what does not, roadmap, architecture / できていること・未完了・ロードマップ・構成 |
 | [use-cases.md](use-cases.md) | EN + JA | Use cases with verified status / 用途と検証状態 |
 | [architecture.md](architecture.md) | EN + JA | System, network, data-flow and backup diagrams / 各種構成図 |
+| [assets/diagrams/](assets/diagrams/README.md) | EN + JA | All SVG diagrams (Pele), color code, how to regenerate / SVG構成図の一覧と再生成 |
 | [github-monitoring.md](github-monitoring.md) | EN + JA | The daily GitHub report: scope, API budget, token, alerts / GitHub日次レポート |
 | [monitoring-notifications.md](monitoring-notifications.md) | EN + JA | Alert policy, notification channels, external heartbeat / 通知と外部監視 |
 | [ops-runbook.md](ops-runbook.md) | EN + JA | Stop/start, resource baseline, updates, manual recovery / 運用手順書 |
