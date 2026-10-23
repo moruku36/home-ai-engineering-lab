@@ -10,6 +10,7 @@ import tempfile
 import time
 
 MAX_BYTES = 8 * 1024 * 1024
+MAX_JSON_DEPTH = 32  # container depth, independent of Python's recursion limit
 MAX_AGE = 26 * 3600
 JST = timezone(timedelta(hours=9))
 STATES = {"uncollected": 0, "ok": 1, "partial": 2, "stale": 3, "failed": 4}
@@ -148,13 +149,44 @@ def render(snapshot, now, source_state="ok", max_age=MAX_AGE):
     return "\n".join(lines) + "\n", export_state
 
 
+def bounded_json_object(raw):
+    """UTF-8 JSON object with at most 32 nested containers, before recursive parsing."""
+    text = raw.decode("utf-8")
+    depth = 0
+    quoted = escaped = False
+    for char in text:
+        if quoted:
+            if escaped:
+                escaped = False
+            elif char == "\\":
+                escaped = True
+            elif char == '"':
+                quoted = False
+        elif char == '"':
+            quoted = True
+        elif char in "[{":
+            depth += 1
+            if depth > MAX_JSON_DEPTH:
+                raise ValueError("JSON nesting limit")
+        elif char in "]}":
+            depth -= 1
+            if depth < 0:
+                raise ValueError("invalid JSON nesting")
+    if depth or quoted:
+        raise ValueError("incomplete JSON")
+    result = json.loads(text)
+    if not isinstance(result, dict):
+        raise ValueError("snapshot root must be an object")
+    return result
+
+
 def load_snapshot(path):
     try:
         with Path(path).open("rb") as stream:
             raw = stream.read(MAX_BYTES + 1)
         if len(raw) > MAX_BYTES:
             return None, "failed"
-        return json.loads(raw), "ok"
+        return bounded_json_object(raw), "ok"
     except FileNotFoundError:
         return None, "missing"
     except (OSError, ValueError, UnicodeError, RecursionError):

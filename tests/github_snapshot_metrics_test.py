@@ -114,6 +114,47 @@ class MetricsTests(unittest.TestCase):
                 self.assertEqual(state, expected)
                 self.assertNotIn("lab_github_value{", text)
 
+    def test_depth_limit_is_independent_of_python_recursion_limit(self):
+        import sys
+        previous = sys.getrecursionlimit()
+        try:
+            sys.setrecursionlimit(10000)
+            with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+                target = Path(directory) / "input.json"
+                # Root object counts as one container.
+                for depth, expected in ((metrics.MAX_JSON_DEPTH, "ok"),
+                                        (metrics.MAX_JSON_DEPTH + 1, "failed"), (2000, "failed")):
+                    target.write_bytes(b'{"schema":1,"extra":' + b"[" * (depth - 1) +
+                                       b"0" + b"]" * (depth - 1) + b"}")
+                    value, status = metrics.load_snapshot(target)
+                    self.assertEqual(status, expected)
+                    if status == "ok":
+                        self.assertIsInstance(value, dict)
+                    else:
+                        self.assertIsNone(value)
+        finally:
+            sys.setrecursionlimit(previous)
+
+    def test_brackets_and_escaped_quotes_inside_strings_are_not_depth(self):
+        data = snapshot()
+        data["notes"] = ["[" * 1000 + '"' + "\\" * 5 + '"]}' + "]" * 1000]
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            target = Path(directory) / "input.json"
+            target.write_text(json.dumps(data), encoding="utf-8")
+            value, state = metrics.load_snapshot(target)
+        self.assertEqual(state, "ok")
+        self.assertEqual(value["schema"], 1)
+        self.assertEqual(metrics.render(value, NOW)[1], 1)
+
+    def test_non_object_roots_and_non_utf8_are_rejected(self):
+        with tempfile.TemporaryDirectory(dir=ROOT) as directory:
+            target = Path(directory) / "input.json"
+            for raw in (b"[]", b"1", b"null", b'"text"', json.dumps(snapshot()).encode("utf-16")):
+                target.write_bytes(raw)
+                value, state = metrics.load_snapshot(target)
+                self.assertIsNone(value)
+                self.assertEqual(state, "failed")
+
     def test_cli_replaces_previous_output_when_source_fails(self):
         with tempfile.TemporaryDirectory(dir=ROOT) as directory:
             source = Path(directory) / "snapshot.json"

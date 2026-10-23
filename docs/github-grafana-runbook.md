@@ -5,7 +5,7 @@
 
 ## 保存形式と出力する範囲
 
-入力は n8n_jobs-state volume内の /data/state/snapshots/latest.json。schema 1、generated_at、partial、各取得フラグ・Coverage、集計用辞書、activityを参照します。最大8MiBまで読みます。名前・タイトル・URL・notes・本文は出力せず、metricラベルの値はコードの固定列挙だけです。非公開リポジトリが含まれる場合も件数だけを扱います。
+入力は n8n_jobs-state volume内の /data/state/snapshots/latest.json。schema 1、generated_at、partial、各取得フラグ・Coverage、集計用辞書、activityを参照します。最大8MiB、UTF-8のJSON object、配列・objectを合わせて最大32階層までを受け付けます。文字列内の括弧やエスケープを区別して、再帰的なJSON解析の前に深さを確認します。ルートが配列・スカラーの入力や深さ超過を、Pythonランタイムの再帰上限に依存せず拒否します。schema 1と必要フィールドの検証は変換時にも行います。名前・タイトル・URL・notes・本文は出力せず、metricラベルの値はコードの固定列挙だけです。非公開リポジトリが含まれる場合も件数だけを扱います。
 
 日付別JSONは既定30件、Markdownは60件、別途latestあり。同日のsnapshotは置換されます。このGrafana案はアーカイブJSONを再生せず、Prometheusへ渡した時点からの観測履歴です。既存Prometheusの15日保持は変更しません。収集対象範囲や認証有無が変わった前後を同一条件として比較しません。
 
