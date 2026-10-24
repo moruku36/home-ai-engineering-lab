@@ -26,3 +26,5 @@ jobs:
         with:
           python-version: '3.12'
       - run: python -m unittest discover -s tests -p security_private_libraries_test.py -v
+      - name: Scan tracked public source for accidental secrets
+        run: bash scripts/scan-secrets.sh
