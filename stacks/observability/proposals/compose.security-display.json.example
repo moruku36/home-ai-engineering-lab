@@ -1,0 +1,12 @@
+{
+  "services": {
+    "github-history": {
+      "command": ["/app/github_security_history.py", "--snapshots", "/snapshots", "--security-summaries", "/security-input", "--serve", "--bind", "0.0.0.0"],
+      "volumes": [
+        {"type": "bind", "source": "${VERIFIED_SECURITY_DISPLAY_INPUT:?exact aggregate-only input directory}", "target": "/security-input", "read_only": true, "bind": {"create_host_path": false}},
+        {"type": "bind", "source": "${VERIFIED_SECURITY_DISPLAY_WRAPPER:?verified public wrapper file}", "target": "/app/github_security_history.py", "read_only": true, "bind": {"create_host_path": false}},
+        {"type": "bind", "source": "${VERIFIED_SECURITY_DISPLAY_CODEC:?verified public codec file}", "target": "/app/security_summary.py", "read_only": true, "bind": {"create_host_path": false}}
+      ]
+    }
+  }
+}

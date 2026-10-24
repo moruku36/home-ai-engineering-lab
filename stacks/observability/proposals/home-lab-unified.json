@@ -1016,6 +1016,31 @@
               "selector": "observed_utc",
               "type": "timestamp",
               "text": "observed_utc"
+            },
+            {
+              "selector": "reason",
+              "type": "string",
+              "text": "reason"
+            },
+            {
+              "selector": "unavailable",
+              "type": "number",
+              "text": "unavailable"
+            },
+            {
+              "selector": "age_seconds",
+              "type": "number",
+              "text": "age_seconds"
+            },
+            {
+              "selector": "last_success_utc",
+              "type": "timestamp",
+              "text": "last_success_utc"
+            },
+            {
+              "selector": "coverage_scope",
+              "type": "string",
+              "text": "coverage_scope"
             }
           ],
           "filters": [],
@@ -1025,7 +1050,7 @@
           }
         }
       ],
-      "description": "Sidekick は監査自動収集・結果保存・Grafana連携が未実装。GitHub依存脆弱性はホスト監査ではありません。",
+      "description": "Dependabot は選択した公開2リポジトリの単発集計のみ。quality と鮮度を確認し、部分取得の0件を全体の正常ゼロとしない。26時間超は古いデータ。Sidekick は未収集。Dependabot はホスト監査ではない。",
       "fieldConfig": {
         "defaults": {
           "unit": "short",

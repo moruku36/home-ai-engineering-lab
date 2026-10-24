@@ -1,0 +1,25 @@
+name: Security aggregate display
+on:
+  push:
+    branches: [codex/dependabot-aggregate-display-20261024]
+  pull_request:
+    paths:
+      - scripts/github_security_history.py
+      - scripts/security_summary.py
+      - tests/security_display_test.py
+      - stacks/observability/proposals/compose.security-display.json.example
+      - stacks/observability/proposals/home-lab-unified.json
+      - .github/workflows/security-display.yml
+permissions:
+  contents: read
+jobs:
+  synthetic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - run: python -B -m unittest discover -s tests -p security_display_test.py
+      - run: bash scripts/scan-secrets.sh
