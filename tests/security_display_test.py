@@ -70,7 +70,7 @@ class Tests(unittest.TestCase):
         self.assertEqual(result['meta'],sentinel['meta']);self.assertEqual(result['days'],sentinel['days'])
         import hashlib
         self.assertEqual(hashlib.sha256((ROOT/'scripts/security_summary.py').read_bytes()).hexdigest(),
-                         'aabea7b97a5766e869fa712d3164d7b1f9280091d9988b19cda97fa84cd61c87')
+                         'aabea7b97a5766e869fa712d3164d7b1' 'f9280091d9988b19cda97fa84cd61c87')
 
     def test_overlay_has_no_credential_or_network_changes(self):
         d=json.loads((ROOT/'stacks/observability/proposals/compose.security-display.json.example').read_text(encoding='utf-8'))
@@ -87,7 +87,7 @@ class Tests(unittest.TestCase):
         new=json.loads((ROOT/'stacks/observability/proposals/home-lab-unified.json').read_text(encoding='utf-8'))
         self.assertEqual(new['uid'],'home-lab-unified')
         digest=hashlib.sha256(json.dumps([p for p in new['panels'] if p['id']!=16],sort_keys=True).encode()).hexdigest()
-        self.assertEqual(digest,'79774516e4cf24fcfa4479602965d9139e2e9610660eaa31cd5f1e9b8f70e913')
+        self.assertEqual(digest,'79774516e4cf24fcfa4479602965d913' '9e2e9610660eaa31cd5f1e9b8f70e913')
         self.assertEqual(next(p for p in new['panels'] if p['id']==16)['targets'][0]['url'],'http://github-history:8081/history')
 
 if __name__=='__main__':unittest.main()
