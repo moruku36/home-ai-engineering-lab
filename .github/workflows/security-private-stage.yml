@@ -1,5 +1,13 @@
 name: Private security library candidate
 on:
+  push:
+    branches:
+      - 'codex/private-security-libraries-20261024'
+    paths:
+      - 'scripts/security_summary.py'
+      - 'scripts/dependabot_metrics.py'
+      - 'tests/security_private_libraries_test.py'
+      - '.github/workflows/security-private-stage.yml'
   pull_request:
     paths:
       - 'scripts/security_summary.py'
