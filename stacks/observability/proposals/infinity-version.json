@@ -1,0 +1,43 @@
+{
+  "plugin_id": "yesoreyeram-infinity-datasource",
+  "version": "4.1.3",
+  "grafana_target": "12.4.3",
+  "declared_grafana_range": ">=11.6.11-0 <12 || >=12.0.10-0 <12.1 || >=12.1.7-0 <12.2 || >=12.2.5-0",
+  "compatibility": "Target satisfies declared range; runtime rendering not verified.",
+  "release": "https://github.com/grafana/grafana-infinity-datasource/releases/tag/v4.1.3",
+  "catalog": "https://grafana.com/grafana/plugins/yesoreyeram-infinity-datasource/",
+  "source_tag": "v4.1.3",
+  "linux_amd64_asset": {
+    "url": "https://github.com/grafana/grafana-infinity-datasource/releases/download/v4.1.3/yesoreyeram-infinity-datasource-4.1.3.linux_amd64.zip",
+    "sha256": "e46468637ceedda3e2f1e27097476c6de2906d4377247df0a79867ec71ddfddf",
+    "condition": "Only if existing runtime architecture is linux/amd64. Not downloaded or installed."
+  },
+  "query_review": {
+    "sources": [
+      "https://raw.githubusercontent.com/grafana/grafana-infinity-datasource/v4.1.3/src/types/query.types.ts",
+      "https://raw.githubusercontent.com/grafana/grafana-infinity-datasource/v4.1.3/src/types/config.types.ts",
+      "https://raw.githubusercontent.com/grafana/grafana-infinity-datasource/v4.1.3/src/constants.ts",
+      "https://raw.githubusercontent.com/grafana/grafana-infinity-datasource/v4.1.3/provisioning/dashboards-actual/infinity-jsonata-jq-filter.json",
+      "https://raw.githubusercontent.com/grafana/grafana-infinity-datasource/v4.1.3/provisioning/datasources/default.yml"
+    ],
+    "type": "json",
+    "source": "url",
+    "parser": "backend",
+    "method": "GET",
+    "formats": [
+      "table",
+      "timeseries"
+    ],
+    "column_types": [
+      "timestamp",
+      "number",
+      "string"
+    ],
+    "roots": [
+      "$.days",
+      "$.meta",
+      "$.security"
+    ],
+    "runtime_tested": false
+  }
+}

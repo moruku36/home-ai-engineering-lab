@@ -1,0 +1,44 @@
+# DESIGN TEMPLATE ONLY; not deployed. Merge into reviewed base Compose model.
+# Resolve bind paths against stacks/observability (base Compose directory).
+# Never use standalone or replace the existing Grafana service.
+services:
+  grafana:
+    # Preserve existing networks; inherit all other existing settings.
+    networks: [default, monitor, history-only]
+  github-history:
+    image: home-ai-lab/python-jobs:1
+    pull_policy: never
+    user: "10001:10001"
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    # No published ports, socket, host networking or credentials.
+    networks: [history-only]
+    entrypoint: ["python3"]
+    command: ["/app/github_history.py", "--snapshots", "/snapshots", "--serve", "--bind", "0.0.0.0"]
+    volumes:
+      - type: bind
+        source: "${VERIFIED_SNAPSHOTS_DIR:?owner must verify snapshots subdirectory only}"
+        target: /snapshots
+        read_only: true
+        bind:
+          create_host_path: false
+      - "../../scripts/github_history.py:/app/github_history.py:ro"
+      - "../../scripts/github_snapshot_metrics.py:/app/github_snapshot_metrics.py:ro"
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8081/healthz', timeout=3)"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+    mem_limit: 128m
+    pids_limit: 64
+networks:
+  history-only:
+    driver: bridge
+    internal: true
+    attachable: false
+    enable_ipv6: false
+# Only grafana and github-history join history-only.
+# Not an authentication boundary against Docker admin/host or compromised Grafana.
+# No proxy/tunnel/routing is added; do not attach other services.
+

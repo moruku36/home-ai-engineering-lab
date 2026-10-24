@@ -1,0 +1,1146 @@
+{
+  "uid": "home-lab-unified",
+  "title": "Home Lab 統合監視（候補）",
+  "schemaVersion": 39,
+  "version": 1,
+  "refresh": "1m",
+  "timezone": "Asia/Tokyo",
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "tags": [
+    "homelab",
+    "proposal"
+  ],
+  "description": "機械・ホストNIC・保存済みGitHub履歴・セキュリティ取得状態。更新監視は別差分。Infinity 4.1.3型定義照合済み、実機描画未検証。",
+  "__inputs": [
+    {
+      "name": "DS_PROMETHEUS",
+      "label": "既存 Prometheus",
+      "type": "datasource",
+      "pluginId": "prometheus",
+      "pluginName": "Prometheus"
+    }
+  ],
+  "templating": {
+    "list": [
+      {
+        "name": "device",
+        "label": "ホスト NIC",
+        "type": "query",
+        "datasource": {
+          "type": "prometheus",
+          "uid": "${DS_PROMETHEUS}"
+        },
+        "query": "label_values(lab_host_network_receive_bytes_total{job=\"node\"}, device)",
+        "refresh": 1,
+        "includeAll": true,
+        "allValue": ".*",
+        "multi": true,
+        "current": {
+          "text": "All",
+          "value": "$__all"
+        }
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "title": "prometheus scrape 稼働",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=\"prometheus\"}",
+          "legendFormat": "{{instance}}",
+          "instant": true
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "停止・取得不可",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "稼働",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 2,
+      "title": "grafana scrape 稼働",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=\"grafana\"}",
+          "legendFormat": "{{instance}}",
+          "instant": true
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "停止・取得不可",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "稼働",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 3,
+      "title": "node scrape 稼働",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 0,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "up{job=\"node\"}",
+          "legendFormat": "{{instance}}",
+          "instant": true
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          },
+          "mappings": [
+            {
+              "type": "value",
+              "options": {
+                "0": {
+                  "text": "停止・取得不可",
+                  "color": "red"
+                },
+                "1": {
+                  "text": "稼働",
+                  "color": "green"
+                }
+              }
+            }
+          ]
+        },
+        "overrides": []
+      },
+      "options": {
+        "colorMode": "background",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "values": false
+        }
+      }
+    },
+    {
+      "id": 4,
+      "title": "CPU 使用率",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 4,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (1 - avg by(instance) (rate(node_cpu_seconds_total{job=\"node\",mode=\"idle\"}[5m])))",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 5,
+      "title": "メモリ使用率",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 4,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (1 - node_memory_MemAvailable_bytes{job=\"node\"} / node_memory_MemTotal_bytes{job=\"node\"})",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 6,
+      "title": "ディスク使用率（マウント別）",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 4,
+        "w": 8,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "100 * (1 - node_filesystem_avail_bytes{job=\"node\",fstype!~\"tmpfs|overlay|squashfs\"} / node_filesystem_size_bytes{job=\"node\",fstype!~\"tmpfs|overlay|squashfs\"})",
+          "legendFormat": "{{mountpoint}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 7,
+      "title": "ホスト稼働時間",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 11,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - node_boot_time_seconds{job=\"node\"}",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 8,
+      "title": "ホスト NIC snapshot 経過秒",
+      "type": "stat",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 8,
+        "y": 11,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "time() - lab_host_network_snapshot_timestamp_seconds{job=\"node\"}",
+          "legendFormat": "{{instance}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "s",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 9,
+      "title": "対象と範囲",
+      "type": "text",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 16,
+        "y": 11,
+        "w": 8,
+        "h": 4
+      },
+      "targets": [],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "mode": "markdown",
+        "content": "既存の機械メトリクスと明示収集されたホスト NIC。家庭内全通信や監査全体を表すものではありません。欠損は正常ゼロではありません。"
+      }
+    },
+    {
+      "id": 10,
+      "title": "ホスト NIC 受信",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 15,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(lab_host_network_receive_bytes_total{job=\"node\",device=~\"$device\"}[5m]) and on(job,instance) (time() - lab_host_network_snapshot_timestamp_seconds{job=\"node\"} < 120)",
+          "legendFormat": "{{device}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 11,
+      "title": "ホスト NIC 送信",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 12,
+        "y": 15,
+        "w": 12,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "rate(lab_host_network_transmit_bytes_total{job=\"node\",device=~\"$device\"}[5m]) and on(job,instance) (time() - lab_host_network_snapshot_timestamp_seconds{job=\"node\"} < 120)",
+          "legendFormat": "{{device}}"
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "Bps",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 12,
+      "title": "RX＋TX エラー・ドロップ合計",
+      "type": "timeseries",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "${DS_PROMETHEUS}"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 22,
+        "w": 24,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "expr": "(rate(lab_host_network_receive_errors_total{job=\"node\",device=~\"$device\"}[5m]) + rate(lab_host_network_receive_dropped_total{job=\"node\",device=~\"$device\"}[5m]) + rate(lab_host_network_transmit_errors_total{job=\"node\",device=~\"$device\"}[5m]) + rate(lab_host_network_transmit_dropped_total{job=\"node\",device=~\"$device\"}[5m])) and on(job,instance) (time() - lab_host_network_snapshot_timestamp_seconds{job=\"node\"} < 120)",
+          "legendFormat": "{{device}} 合計"
+        }
+      ],
+      "description": "4種のカウンターの合計。ユニークなパケット数ではありません。120秒以上古い系列は非表示。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "ops",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 13,
+      "title": "GitHub 日別実績（保存済み集計対象日）",
+      "type": "timeseries",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "homelab-history"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 28,
+        "w": 24,
+        "h": 9
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://github-history:8081/history",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "parser": "backend",
+          "root_selector": "$.days",
+          "format": "timeseries",
+          "columns": [
+            {
+              "selector": "time",
+              "type": "timestamp",
+              "text": "time"
+            },
+            {
+              "selector": "prs_opened",
+              "type": "number",
+              "text": "prs_opened"
+            },
+            {
+              "selector": "prs_merged",
+              "type": "number",
+              "text": "prs_merged"
+            },
+            {
+              "selector": "prs_closed_unmerged",
+              "type": "number",
+              "text": "prs_closed_unmerged"
+            },
+            {
+              "selector": "issues_opened",
+              "type": "number",
+              "text": "issues_opened"
+            },
+            {
+              "selector": "issues_closed",
+              "type": "number",
+              "text": "issues_closed"
+            }
+          ],
+          "filters": [],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "homelab-history"
+          }
+        }
+      ],
+      "description": "JST の実際の対象日。部分取得は下限値。欠損は null。保持範囲外を補完せず、scrape回数による累積なし。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "drawStyle": "bars",
+            "spanNulls": false,
+            "lineWidth": 0,
+            "fillOpacity": 60,
+            "stacking": {
+              "mode": "none",
+              "group": "A"
+            }
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "list",
+          "placement": "bottom"
+        },
+        "tooltip": {
+          "mode": "multi"
+        }
+      }
+    },
+    {
+      "id": 14,
+      "title": "日別取得状態（各指標）",
+      "type": "table",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "homelab-history"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 37,
+        "w": 24,
+        "h": 7
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://github-history:8081/history",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "parser": "backend",
+          "root_selector": "$.days",
+          "format": "table",
+          "columns": [
+            {
+              "selector": "day",
+              "type": "string",
+              "text": "day"
+            },
+            {
+              "selector": "collected_at",
+              "type": "timestamp",
+              "text": "collected_at"
+            },
+            {
+              "selector": "quality",
+              "type": "number",
+              "text": "quality"
+            },
+            {
+              "selector": "prs_opened_quality",
+              "type": "number",
+              "text": "prs_opened_quality"
+            },
+            {
+              "selector": "prs_merged_quality",
+              "type": "number",
+              "text": "prs_merged_quality"
+            },
+            {
+              "selector": "prs_closed_unmerged_quality",
+              "type": "number",
+              "text": "prs_closed_unmerged_quality"
+            },
+            {
+              "selector": "issues_opened_quality",
+              "type": "number",
+              "text": "issues_opened_quality"
+            },
+            {
+              "selector": "issues_closed_quality",
+              "type": "number",
+              "text": "issues_closed_quality"
+            }
+          ],
+          "filters": [],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "homelab-history"
+          }
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byRegexp",
+              "options": ".*quality$"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "未取得・未連携",
+                        "color": "gray"
+                      },
+                      "1": {
+                        "text": "取得済み",
+                        "color": "green"
+                      },
+                      "2": {
+                        "text": "部分取得",
+                        "color": "yellow"
+                      },
+                      "3": {
+                        "text": "古いデータ",
+                        "color": "orange"
+                      },
+                      "4": {
+                        "text": "取得失敗",
+                        "color": "red"
+                      },
+                      "5": {
+                        "text": "未対応",
+                        "color": "gray"
+                      },
+                      "6": {
+                        "text": "キャッシュ日時不明",
+                        "color": "orange"
+                      },
+                      "7": {
+                        "text": "オフライン",
+                        "color": "gray"
+                      },
+                      "8": {
+                        "text": "キャッシュ古い",
+                        "color": "orange"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {}
+    },
+    {
+      "id": 15,
+      "title": "履歴保持範囲と最新取得",
+      "type": "table",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "homelab-history"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 44,
+        "w": 24,
+        "h": 5
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://github-history:8081/history",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "parser": "backend",
+          "root_selector": "$.meta",
+          "format": "table",
+          "columns": [
+            {
+              "selector": "available_start",
+              "type": "string",
+              "text": "available_start"
+            },
+            {
+              "selector": "available_end",
+              "type": "string",
+              "text": "available_end"
+            },
+            {
+              "selector": "dated_files",
+              "type": "number",
+              "text": "dated_files"
+            },
+            {
+              "selector": "missing_days",
+              "type": "number",
+              "text": "missing_days"
+            },
+            {
+              "selector": "invalid_files",
+              "type": "number",
+              "text": "invalid_files"
+            },
+            {
+              "selector": "latest_snapshot_utc",
+              "type": "timestamp",
+              "text": "latest_snapshot_utc"
+            },
+            {
+              "selector": "quality",
+              "type": "number",
+              "text": "quality"
+            }
+          ],
+          "filters": [],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "homelab-history"
+          }
+        }
+      ],
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": []
+      },
+      "options": {}
+    },
+    {
+      "id": 16,
+      "title": "セキュリティ：Dependabot／Sidekick",
+      "type": "table",
+      "datasource": {
+        "type": "yesoreyeram-infinity-datasource",
+        "uid": "homelab-history"
+      },
+      "gridPos": {
+        "x": 0,
+        "y": 49,
+        "w": 24,
+        "h": 6
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "type": "json",
+          "source": "url",
+          "url": "http://github-history:8081/history",
+          "url_options": {
+            "method": "GET",
+            "data": ""
+          },
+          "parser": "backend",
+          "root_selector": "$.security",
+          "format": "table",
+          "columns": [
+            {
+              "selector": "scope",
+              "type": "string",
+              "text": "scope"
+            },
+            {
+              "selector": "quality",
+              "type": "number",
+              "text": "quality"
+            },
+            {
+              "selector": "risk",
+              "type": "number",
+              "text": "risk"
+            },
+            {
+              "selector": "critical_high",
+              "type": "number",
+              "text": "critical_high"
+            },
+            {
+              "selector": "medium_low",
+              "type": "number",
+              "text": "medium_low"
+            },
+            {
+              "selector": "unknown_alerts",
+              "type": "number",
+              "text": "unknown_alerts"
+            },
+            {
+              "selector": "checked",
+              "type": "number",
+              "text": "checked"
+            },
+            {
+              "selector": "expected",
+              "type": "number",
+              "text": "expected"
+            },
+            {
+              "selector": "observed_utc",
+              "type": "timestamp",
+              "text": "observed_utc"
+            }
+          ],
+          "filters": [],
+          "datasource": {
+            "type": "yesoreyeram-infinity-datasource",
+            "uid": "homelab-history"
+          }
+        }
+      ],
+      "description": "Sidekick は監査自動収集・結果保存・Grafana連携が未実装。GitHub依存脆弱性はホスト監査ではありません。",
+      "fieldConfig": {
+        "defaults": {
+          "unit": "short",
+          "noValue": "未取得",
+          "color": {
+            "mode": "palette-classic"
+          },
+          "custom": {
+            "spanNulls": false
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "quality"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "未取得・未連携",
+                        "color": "gray"
+                      },
+                      "1": {
+                        "text": "取得済み",
+                        "color": "green"
+                      },
+                      "2": {
+                        "text": "部分取得",
+                        "color": "yellow"
+                      },
+                      "3": {
+                        "text": "古いデータ",
+                        "color": "orange"
+                      },
+                      "4": {
+                        "text": "取得失敗",
+                        "color": "red"
+                      },
+                      "5": {
+                        "text": "未対応",
+                        "color": "gray"
+                      },
+                      "6": {
+                        "text": "キャッシュ日時不明",
+                        "color": "orange"
+                      },
+                      "7": {
+                        "text": "オフライン",
+                        "color": "gray"
+                      },
+                      "8": {
+                        "text": "キャッシュ古い",
+                        "color": "orange"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "risk"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "0": {
+                        "text": "不明",
+                        "color": "gray"
+                      },
+                      "1": {
+                        "text": "確認範囲で問題なし",
+                        "color": "green"
+                      },
+                      "2": {
+                        "text": "要確認",
+                        "color": "yellow"
+                      },
+                      "3": {
+                        "text": "要対応",
+                        "color": "red"
+                      }
+                    }
+                  }
+                ]
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "options": {}
+    }
+  ]
+}
