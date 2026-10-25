@@ -27,6 +27,8 @@ Based on repository code and recorded verification as of **2026-10-20 JST**, not
 
 Detailed evidence: [build progress](docs/build-progress.md). Newer topic-specific records linked above take precedence over older build entries.
 
+Latest maintenance record: [Brotli security response and n8n update, 2026-10-25](docs/brotli-n8n-update-2026-10-25.md) (Japanese; verified scope and remaining checks).
+
 ## Architecture
 
 | Layer | Components and boundary |
