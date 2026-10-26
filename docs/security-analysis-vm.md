@@ -9,6 +9,8 @@
 - **スコープB（未受入れ）**: REA → Ghidra の解析能力の受入れ。解析コマンドが結果を返したことと、受入れ試験への合格は分けて扱います。
 - **元の評価を保持**: A4 の `FAIL` と評価レポートの `REPORT=UNVERIFIED` は変更しません。後続の補足確認やスコープAの受入れは、この判定を上書きしません。
 
+用途や公式事例を調べる入口: [REA usage and resources / REAの用途・参照リンク](rea-usage-resources.md)。公式の機能紹介は、以下のラボ検証・受入れ記録を変更しません。
+
 ## 1. 現在の構成
 
 ![仮想NICなしのQEMU/KVMゲスト、読み取り専用ISO、独立したWorkbenchとREA・Ghidra、受入れ範囲を示す構成図](assets/security-analysis-vm/architecture.svg)

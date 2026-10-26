@@ -22,6 +22,12 @@ READMEは言語別ページです。詳細資料は各資料の既存の言語�
 | [playground.md](playground.md) | EN + JA | OSS playground: Prometheus, Grafana, Kubernetes (kind) / OSSプレイグラウンド |
 | [playground-kyverno-design.md](playground-kyverno-design.md) | EN + JA | Design for adding Kyverno (not implemented) / Kyverno追加の設計（未実装） |
 
+## REA reference / REA の参照資料
+
+| Doc | Language | About / 内容 |
+|---|---|---|
+| [rea-usage-resources.md](rea-usage-resources.md) | EN + JA | Official resources, concrete uses and community discovery; separate from local validation / 公式リンク・用途別事例・コミュニティ一覧。ラボの検証状態とは区別 |
+
 ## Planning & Inactive designs / 計画・提案段階の設計
 
 | Doc | Language | About / 内容 |

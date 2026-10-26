@@ -62,6 +62,8 @@ ssh -N -L 3001:127.0.0.1:3001 -L 5678:127.0.0.1:5678 -L 9090:127.0.0.1:9090 -L 3
 - **Investigate missing scheduled runs:** follow the read-only checks in [GitHub monitoring §11](docs/github-monitoring.md#11-scheduled-run-investigation-task-122-2026-10-18). Do not use the deployment script as a status check.
 - **Stop/start, update or recover:** [operations runbook](docs/ops-runbook.md).
 
+- **Explore REA use cases:** [Official guides, examples and resource map](docs/rea-usage-resources.md). Upstream capabilities are separate from this lab's unaccepted REA → Ghidra scope.
+
 ## Build or develop
 
 1. **Rebuild the host:** [physical setup](docs/physical-setup-guide.md) → [implementation plan and phase results](docs/implementation-plan.md). These are rebuild records, not a one-command installer.

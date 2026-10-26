@@ -61,6 +61,8 @@ ssh -N -L 3001:127.0.0.1:3001 -L 5678:127.0.0.1:5678 -L 9090:127.0.0.1:9090 -L 3
 - **定期実行されない場合：** [GitHub monitoring §11](docs/github-monitoring.md#11-scheduled-run-investigation-task-122-2026-10-18) の読み取り専用の調査手順を使う。状態確認のために deploy スクリプトを実行しない。
 - **停止・再開・更新・復旧：** [運用手順書](docs/ops-runbook.md) を参照。
 
+- **REAの用途を調べる：** [公式ガイド・事例・参照先一覧](docs/rea-usage-resources.md)。公式の機能紹介と、ラボのREA → Ghidra未受入れ範囲を分けて記載しています。
+
 ## 構築・開発
 
 1. **ホストを再構築する：** [物理セットアップ](docs/physical-setup-guide.md) → [実装計画とフェーズ別の結果](docs/implementation-plan.md)。再構築用の記録であり、一括インストーラーではありません。
