@@ -1,0 +1,19 @@
+# Review-only, single-command version probe. Supply a verified immutable image
+# reference explicitly. No gateway, published ports, model or host mounts.
+services:
+  version:
+    image: ${OPENCLAW_IMAGE:?Set a verified official image digest before use}
+    entrypoint: ["node", "dist/index.js"]
+    command: ["--version"]
+    network_mode: none
+    read_only: true
+    user: "1000:1000"
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=64m
+      - /home/node:rw,nosuid,nodev,noexec,size=64m
+    mem_limit: 512m
+    cpus: 0.5
+    pids_limit: 100
+    restart: "no"
