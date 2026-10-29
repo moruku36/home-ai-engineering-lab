@@ -2,8 +2,9 @@
 
 This is a non-secret observation record, not an inventory, a deployment manifest,
 or proof that the desired configuration has been applied. The HomeLab construction
-Ansible source has not yet been located in this repository. Integrate with that
-source once identified; do not create a second controller or state database.
+Ansible source has not yet been located in this repository. A new, read-only
+[Ansible baseline](../ansible/README.md) is available for review; reconcile it
+with the construction source if found. It is not a second state database.
 
 ## Observed host services
 
@@ -29,10 +30,9 @@ the existing recovery identity; generating a new key cannot decrypt old backups.
 
 ## Integration boundary
 
-When the existing Ansible source and its owner are identified, record desired
-image versions and digests there, independently from observed versions and the
-result of each application. Add service-specific health, backup and rollback
-tasks to the existing roles only after their actual inputs, dependencies and
+Record desired image versions and digests independently from observed versions
+and the result of each application. Add service-specific health, backup and rollback
+tasks to the roles only after their actual inputs, dependencies and
 recovery procedure are verified. A syntax check or Ansible check mode is not
 evidence of a successful deployment or a guarantee of zero changes.
 
