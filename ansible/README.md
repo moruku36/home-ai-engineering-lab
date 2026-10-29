@@ -22,6 +22,14 @@ differs only in Grafana's image before applying. It also checks runtime volume,
 provisioning and port and then health. A second apply to verify idempotency has
 not yet been performed.
 
+`apply-n8n.yml` is a draft for the identified deployed n8n Compose source,
+whose recorded content hash is checked before application. It compares runtime
+volume, loopback port and networks, checks that the effective configuration
+and all other services remain unchanged apart from the n8n image, and checks
+health and version afterwards. The candidate 2.44.7 and this role have not been
+applied or checked for live idempotency. The role does not expose resolved
+environment values; it will stop on an unrecognized source or changed inputs.
+
 Copy `inventory.example.yml` to the ignored `inventory.local.yml` and fill in
 connection details locally. Keep identity files, vault passwords, real hosts,
 addresses and private paths outside Git. Do not put secrets in this directory;

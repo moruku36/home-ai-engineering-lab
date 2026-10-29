@@ -47,8 +47,9 @@ apply and Grafana dashboard-level verification have not been performed.
 
 The repository's n8n Compose image reference was observed as 2.43.5, while the
 previously reported running n8n version was 2.44.6. Health returned HTTP 200.
-Inspect the actual deployed Compose inputs before applying any n8n change;
-neither the repository tag nor a newer candidate proves the deployed image.
+The documented deployed Compose file matched the owner's recorded hash. Its
+image refers to the observed local image digest, rather than the repository's
+older tag. A scoped 2.44.7 role has been prepared but not applied or live-tested.
 
 ## Integration boundary
 
