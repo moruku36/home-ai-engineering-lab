@@ -30,21 +30,17 @@ default makes no network request. Do not put credentials into that URL. Check
 mode is not a guarantee of no changes, and a successful syntax or health check is
 not proof that declared images are deployed.
 
-`upgrade-gate.yml` is a review-only gate for future upgrade work. It requires
-an explicit enable flag, one known target, and a matching record of isolated
-restore evidence. Missing inputs cause rejection. Even if all inputs are set,
-the playbook deliberately stops without updating anything. Evidence is an
-operator assertion, not automatically verified proof; it must be reviewed and
-must not contain secret paths or contents. Any future mutating role must include
-this gate in its own execution path and provide separately reviewed backup,
-restore and rollback procedures; this standalone gate cannot enforce safety on
-other playbooks.
+`verify-existing.yml` inspects one explicitly selected, already running
+container and compares its image reference and state with the baseline. It
+requires Docker access and does not create or update containers. This is not a
+complete comparison of Compose mounts, ports, environment or volume contents.
+The requested equivalent Compose application and version-changing roles remain
+unimplemented; the playbooks here cannot yet recreate or update the lab.
 
-Backup and rollback are intentionally not automated yet: the current encrypted
-Prometheus backup has not passed an isolated restore. Identify the existing
-recovery key, verify a separate restoration and document the tested recovery
-procedure before adding mutating tasks. For other components, establish their
-own backup coverage and rollback procedure before applying updates.
+The owner accepts proceeding without an additional backup or restore test.
+Existing encrypted backups and volumes must be retained. Ansible configuration
+can reproduce software and settings, but cannot recreate persistent n8n,
+Grafana or Kuma data that has been lost.
 
 Record an applied change and the results of its health and recovery checks in a
 separate sanitized maintenance record. Never mark an unexecuted change as applied.

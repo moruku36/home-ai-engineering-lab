@@ -31,9 +31,10 @@ the existing recovery identity; generating a new key cannot decrypt old backups.
 ## Integration boundary
 
 Record desired image versions and digests independently from observed versions
-and the result of each application. Add service-specific health, backup and rollback
-tasks to the roles only after their actual inputs, dependencies and
-recovery procedure are verified. A syntax check or Ansible check mode is not
+and the result of each application. The owner accepts updates without an
+additional backup or restore test. Preserve existing backups and data, and add
+service-specific apply and health tasks after their actual inputs and dependencies
+are understood. A syntax check or Ansible check mode is not
 evidence of a successful deployment or a guarantee of zero changes.
 
 Keep actual inventories, connection details, secrets, recovery identities,
