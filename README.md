@@ -33,6 +33,8 @@ Shared configuration observations and Ansible integration status: [configuration
 
 Availability monitoring proposal: [Prometheus alerting candidate](docs/prometheus-alerts-candidate.md).
 
+Custom component update review: [custom OSS candidate](docs/custom-oss-update-candidate.md).
+
 ## Architecture
 
 | Layer | Components and boundary |
