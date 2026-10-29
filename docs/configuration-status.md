@@ -17,7 +17,7 @@ fresh scan and do not establish the latest available or desired versions.
 | Grafana OSS | 12.4.14, running | API reports database ok; role idempotency not yet checked. |
 | n8n | 2.44.7, running | Owner confirmed the running version; health and readiness HTTP 200. |
 | node_exporter | 1.12.1, running | No update verified. |
-| Uptime Kuma | 2.5.6, running | Owner confirmed version; 2.5.8 TCP/TLS compatibility is under review. |
+| Uptime Kuma | 2.5.6, running | Owner requested no update; service remains in place. |
 | Open WebUI | Stopped, data retained | Not an update target until its treatment is agreed. |
 | Local jobs and MCP | Running | Source and deployed image correspondence not established. |
 | KVM analysis tools | Not freshly inspected | Host observations do not establish guest versions. |
@@ -54,15 +54,10 @@ update. Subsequent health and readiness endpoints returned HTTP 200; the full
 Ansible recap and a second application remain unverified.
 
 The node_exporter release list still identifies 1.12.1 as its latest release.
-Uptime Kuma's UI returned HTTP 200 and the owner confirmed version 2.5.6. Release
-2.5.8 is available; its release notes say existing TCP monitors using TLS become
-ordinary TCP monitors, so inspect the monitor scope before choosing this update.
-The first aggregate diagnostic returned an unconfirmed result. It assumed the
-`sqlite3` Node module; the 2.5.6 upstream package instead lists `mysql2`, so that
-assumption is a plausible cause but has not been verified on the live container.
-The replacement checks module and local socket availability and, if possible,
-uses a read-only transaction to report only aggregate TCP/TLS counts. Its live
-result is pending and no credential values are read or printed.
+Uptime Kuma's UI returned HTTP 200 and the owner confirmed version 2.5.6. The
+owner subsequently requested no Kuma update or further TLS diagnostics. Earlier
+TLS usage checks were inconclusive; no change to the service or its monitoring
+configuration has been made as part of this decision.
 
 ## Integration boundary
 
