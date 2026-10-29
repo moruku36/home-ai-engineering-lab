@@ -30,6 +30,14 @@
       - home_lab_compose_identity.stdout in ['observability|prometheus|running|' ~ home_lab_project_src ~ '/compose.yaml|' ~ home_lab_project_src, 'observability|prometheus|running|' ~ home_lab_project_src ~ '/compose.yaml,' ~ home_lab_project_src ~ '/' ~ home_lab_override_filename ~ '|' ~ home_lab_project_src]
     fail_msg: Existing target does not match the expected running Compose service.
 
+- name: Compare effective Compose and runtime mounts and published ports
+  ansible.builtin.script:
+    cmd: 'compare_runtime.py {{ home_lab_project_src | quote }}'
+    executable: python3
+  changed_when: false
+  check_mode: false
+  no_log: true
+
 - name: Inspect any existing image override
   ansible.builtin.stat:
     path: '{{ home_lab_project_src }}/{{ home_lab_override_filename }}'

@@ -45,11 +45,12 @@ requires explicit enablement and private project details, checks Compose identit
 uses the existing Compose file and applies only that service with dependencies
 disabled and no volume or orphan removal. An optional image-only override allows
 a fixed Prometheus tag or digest. It performs a loopback readiness check after
-applying. It can restart or recreate Prometheus. Before use, compare the current
-running service with the effective Compose configuration: this role does not
-establish that runtime mounts, ports or other settings match. It does not recreate
-the entire lab. The role and its idempotency remain untested. Check mode skips
-the Compose application and readiness check.
+applying. It can restart or recreate Prometheus. A preflight compares the known
+volume, bind mount and published port with the running container without logging
+the resolved configuration. This does not compare all runtime settings, such as
+command, environment or networks. The role does not recreate the entire lab; its
+live behaviour and idempotency remain untested. Check mode skips the Compose
+application and readiness check.
 
 The owner accepts proceeding without an additional backup or restore test.
 Existing encrypted backups and volumes must be retained. Ansible configuration
