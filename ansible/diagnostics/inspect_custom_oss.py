@@ -66,7 +66,7 @@ def inspect(name):
 
 
 def main():
-    if len(sys.argv) != 2 or not os.path.isabs(sys.argv[1]):
+    if len(sys.argv) not in (2, 3) or not os.path.isabs(sys.argv[1]):
         raise ValueError('repository')
     root = Path(sys.argv[1])
     print('public_main_snapshot=' + PUBLIC_MAIN)
@@ -77,13 +77,18 @@ def main():
             inspect(name)
         except (OSError, ValueError, KeyError, TypeError, UnicodeError, subprocess.SubprocessError):
             print(name + ' inspection=unavailable')
-    try:
-        mode = os.lstat('/run/rea-vm/serial.sock').st_mode
-        print('guest_serial=' + ('socket' if stat.S_ISSOCK(mode) else 'unexpected_type'))
-    except FileNotFoundError:
-        print('guest_serial=absent')
-    except PermissionError:
-        print('guest_serial=permission_denied')
+    if len(sys.argv) == 3:
+        if not os.path.isabs(sys.argv[2]):
+            raise ValueError('socket')
+        try:
+            mode = os.lstat(sys.argv[2]).st_mode
+            print('guest_serial=' + ('socket' if stat.S_ISSOCK(mode) else 'unexpected_type'))
+        except FileNotFoundError:
+            print('guest_serial=absent')
+        except PermissionError:
+            print('guest_serial=permission_denied')
+    else:
+        print('guest_serial=not_requested')
     print('runtime_image_source_correspondence=unverified')
 
 
