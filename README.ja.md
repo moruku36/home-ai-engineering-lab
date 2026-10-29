@@ -67,6 +67,7 @@ Workbench と REA は独立したツールで、相互連携は未実装です�
 
 ## 運用と資料
 
+- 実機の確認状況と残課題は [構成状況](docs/configuration-status.md)、[監視案](docs/prometheus-alerts-candidate.md)、[自作 OSS 更新候補](docs/custom-oss-update-candidate.md) を参照。
 - ホストへは SSH で接続し、ループバック限定の管理画面は SSH トンネルから開きます。[運用手順書](docs/ops-runbook.md)
 - レポートの生成・参照は [GitHub 監視](docs/github-monitoring.md) と [MCP](docs/mcp-internal-api.md) を参照。手動実行の成功は定期実行の証明にはなりません。
 - メトリクスと死活監視は [プレイグラウンド](docs/playground.md) と [監視・通知](docs/monitoring-notifications.md) を参照。

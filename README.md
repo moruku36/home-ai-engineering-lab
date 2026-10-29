@@ -4,12 +4,6 @@
 
 A home lab for GitHub automation, observability, and hands-on infrastructure and security experiments. An Intel NUC running Ubuntu Server hosts Docker Compose services and a separate QEMU/KVM security-analysis guest. The current automation platform does not run an LLM or use a paid LLM API.
 
-Shared configuration observations and Ansible integration status: [configuration status](docs/configuration-status.md).
-
-Availability monitoring proposal: [Prometheus alerting candidate](docs/prometheus-alerts-candidate.md).
-
-Custom component update review: [custom OSS candidate](docs/custom-oss-update-candidate.md).
-
 ## Architecture
 
 The diagram shows the recorded configuration and observed running services as of 2026-10-29. A running container does not prove every workflow or integration works. The guest console socket exists; the guest's current running state and tool versions have not been rechecked.
@@ -73,6 +67,7 @@ The custom job and MCP source differs from the public snapshot in some files. Do
 
 ## Operate and explore
 
+- Read [configuration status](docs/configuration-status.md), the [monitoring proposal](docs/prometheus-alerts-candidate.md), and the [custom OSS update candidate](docs/custom-oss-update-candidate.md) for observations and remaining work.
 - Access the host over SSH and use SSH tunnels for loopback-bound administration UIs. See the [operations runbook](docs/ops-runbook.md).
 - Generate and read reports using the [GitHub monitoring guide](docs/github-monitoring.md) and [MCP guide](docs/mcp-internal-api.md). A manual run does not establish that the schedule works.
 - Explore metrics and service checks in the [playground](docs/playground.md) and [monitoring guide](docs/monitoring-notifications.md).
