@@ -1,0 +1,13 @@
+---
+- name: Require an explicit private destination and write enablement
+  ansible.builtin.assert:
+    that:
+      - home_lab_alert_rules_write_enabled | bool
+      - home_lab_alert_rules_path is match('^/')
+    fail_msg: The alert rules candidate needs an explicit private destination and enablement.
+
+- name: Place candidate rule file
+  ansible.builtin.copy:
+    src: target-alerts.yml
+    dest: '{{ home_lab_alert_rules_path }}'
+    mode: '0644'

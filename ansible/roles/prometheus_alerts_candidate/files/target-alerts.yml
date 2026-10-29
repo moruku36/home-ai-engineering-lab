@@ -1,0 +1,27 @@
+---
+groups:
+  - name: home-lab-targets
+    interval: 30s
+    rules:
+      - alert: HomeLabMetricsTargetDown
+        expr: up{job=~"node|grafana"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: A monitored metrics endpoint is unavailable
+          description: The node exporter or Grafana metrics scrape has failed for two minutes.
+      - alert: HomeLabNodeTargetMissing
+        expr: absent(up{job="node"})
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: The node exporter scrape target is missing
+      - alert: HomeLabGrafanaTargetMissing
+        expr: absent(up{job="grafana"})
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: The Grafana scrape target is missing

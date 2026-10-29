@@ -31,6 +31,8 @@ Latest maintenance record: [Brotli security response and n8n update, 2026-10-25]
 
 Shared configuration observations and Ansible integration status: [configuration status](docs/configuration-status.md).
 
+Availability monitoring proposal: [Prometheus alerting candidate](docs/prometheus-alerts-candidate.md).
+
 ## Architecture
 
 | Layer | Components and boundary |
