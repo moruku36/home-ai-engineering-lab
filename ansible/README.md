@@ -24,6 +24,11 @@ parse the playbook without applying it:
 ansible-playbook -i ansible/inventory.example.yml ansible/playbook.yml --syntax-check
 ```
 
+On 2026-10-29, `ansible-core` 2.21.5 and `community.docker` 5.4.0 were
+installed in a user-owned isolated review environment. All three playbooks
+passed `--syntax-check`. The local baseline validation was run twice with
+`changed=0`; this did not exercise Compose or demonstrate apply idempotency.
+
 The role validates the declared baseline. An optional readiness request can be
 enabled by setting `home_lab_prometheus_ready_url` in private inventory; the
 default makes no network request. Do not put credentials into that URL. Check
