@@ -1,0 +1,22 @@
+---
+- name: Require explicitly provided private probe targets
+  ansible.builtin.assert:
+    that:
+      - home_lab_probe_files_write_enabled | bool
+      - home_lab_probe_output_dir is match('^/')
+      - home_lab_blackbox_endpoint is match('^[A-Za-z0-9._-]+:[0-9]+$')
+      - home_lab_n8n_probe_target is match('^https?://[^/@?#\s]+(/[^?#\s]*)?$')
+      - home_lab_mcp_probe_target is match('^https?://[^/@?#\s]+(/[^?#\s]*)?$')
+      - home_lab_ssh_probe_target is match('^[A-Za-z0-9._-]+:[0-9]+$')
+    fail_msg: Supply explicitly enabled private probe targets without URL credentials or query strings.
+  no_log: true
+
+- name: Render blackbox modules and Prometheus scrape fragment
+  ansible.builtin.template:
+    src: '{{ item.src }}'
+    dest: '{{ home_lab_probe_output_dir }}/{{ item.dest }}'
+    mode: '0600'
+  loop:
+    - {src: blackbox.yml.j2, dest: blackbox.yml}
+    - {src: scrape-fragment.yml.j2, dest: scrape-fragment.yml}
+  no_log: true

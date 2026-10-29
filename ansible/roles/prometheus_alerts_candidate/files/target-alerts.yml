@@ -25,3 +25,68 @@ groups:
           severity: warning
         annotations:
           summary: The Grafana scrape target is missing
+      - alert: HomeLabEndpointProbeFailed
+        expr: probe_success{job=~"home_lab_http_probe|home_lab_ssh_probe"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: A configured HTTP or TCP probe is failing
+      - alert: HomeLabProbeExporterUnreachable
+        expr: up{job=~"home_lab_http_probe|home_lab_ssh_probe"} == 0
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: A configured probe cannot be scraped
+      - alert: HomeLabN8nProbeMissing
+        expr: absent(probe_success{job="home_lab_http_probe",monitor="n8n"})
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: The n8n probe series is missing
+      - alert: HomeLabMcpProbeMissing
+        expr: absent(probe_success{job="home_lab_http_probe",monitor="mcp"})
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: The MCP probe series is missing
+      - alert: HomeLabSshProbeMissing
+        expr: absent(probe_success{job="home_lab_ssh_probe",monitor="ssh"})
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: The SSH probe series is missing
+      - alert: HomeLabGitHubSnapshotStale
+        expr: time() - lab_github_snapshot_timestamp_seconds{job="node"} > 93600
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: The GitHub snapshot is over 26 hours old
+          description: This measures snapshot freshness, not the latest collector attempt.
+      - alert: HomeLabGitHubSnapshotMetricMissing
+        expr: absent(lab_github_snapshot_timestamp_seconds{job="node"})
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: The GitHub snapshot timestamp is unavailable
+      - alert: HomeLabGitHubExporterStale
+        expr: time() - lab_github_export_timestamp_seconds{job="node"} > 120
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: The GitHub snapshot exporter is stale
+          description: Exporter evaluation time does not prove a collector attempt.
+      - alert: HomeLabGitHubExporterMissing
+        expr: absent(lab_github_export_timestamp_seconds{job="node"})
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: The GitHub snapshot exporter metric is missing
