@@ -8,9 +8,9 @@ and has not yet been exercised on the lab.
 The role declares the initial desired image tags based on the owner's previous
 observations. They are not a current inventory: see the separate
 [observation record](../docs/configuration-status.md). Prometheus 3.15.1 is
-the desired version and was subsequently confirmed running. The n8n image tag,
-Kuma version, guest tools and image digests remain unconfirmed. A future change
-must verify and pin the relevant digest before applying an image update.
+the desired version and was subsequently confirmed running. The owner also
+confirmed n8n 2.44.7 and Kuma 2.5.6; the n8n runtime image digest and guest tool
+versions remain unconfirmed. Verify and pin the relevant digest before an update.
 
 Grafana 12.4.14 was applied and subsequently reported healthy. Grafana's official Docker
 documentation says that `grafana/grafana` provides the OSS image and replaces
@@ -29,8 +29,8 @@ and all other services remain unchanged apart from the n8n image, and checks
 health and version afterwards. The role has not been checked for live
 idempotency. The role does not expose resolved
 environment values; it will stop on an unrecognized source or changed inputs.
-The owner reported executing the candidate; health and readiness returned HTTP
-200 afterwards, but the recap and resulting running version are unconfirmed.
+The owner confirmed n8n 2.44.7 after executing the candidate; health and readiness
+returned HTTP 200 afterwards. The full recap remains unverified.
 
 Copy `inventory.example.yml` to the ignored `inventory.local.yml` and fill in
 connection details locally. Keep identity files, vault passwords, real hosts,

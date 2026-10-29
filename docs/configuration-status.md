@@ -15,9 +15,9 @@ fresh scan and do not establish the latest available or desired versions.
 | --- | --- | --- |
 | Prometheus | 3.15.1, running | Readiness HTTP 200 and 3/3 targets up after the owner-reported update. |
 | Grafana OSS | 12.4.14, running | API reports database ok; role idempotency not yet checked. |
-| n8n | 2.44.6, running | Candidate 2.44.7; actual Compose source differs from runtime and needs investigation. |
+| n8n | 2.44.7, running | Owner confirmed the running version; health and readiness HTTP 200. |
 | node_exporter | 1.12.1, running | No update verified. |
-| Uptime Kuma | Running | Exact version not confirmed. |
+| Uptime Kuma | 2.5.6, running | Owner confirmed version; 2.5.8 TCP/TLS compatibility is under review. |
 | Open WebUI | Stopped, data retained | Not an update target until its treatment is agreed. |
 | Local jobs and MCP | Running | Source and deployed image correspondence not established. |
 | KVM analysis tools | Not freshly inspected | Host observations do not establish guest versions. |
@@ -49,15 +49,13 @@ The repository's n8n Compose image reference was observed as 2.43.5, while the
 previously reported running n8n version was 2.44.6. Health returned HTTP 200.
 The documented deployed Compose file matched the owner's recorded hash. Its
 image refers to the observed local image digest, rather than the repository's
-older tag. The owner reported that the scoped 2.44.7 command finished; its recap
-was not provided. Subsequent health and readiness endpoints returned HTTP 200,
-but the running version could not be established through the nonprivileged API.
-Do not mark the candidate as applied until its version or successful recap is
-independently confirmed.
+older tag. The owner confirmed the running n8n version is 2.44.7 after the scoped
+update. Subsequent health and readiness endpoints returned HTTP 200; the full
+Ansible recap and a second application remain unverified.
 
 The node_exporter release list still identifies 1.12.1 as its latest release.
-Uptime Kuma's UI returned HTTP 200. Release 2.5.8 is available, but the running
-version is unknown; its release notes say existing TCP monitors using TLS become
+Uptime Kuma's UI returned HTTP 200 and the owner confirmed version 2.5.6. Release
+2.5.8 is available; its release notes say existing TCP monitors using TLS become
 ordinary TCP monitors, so inspect the monitor scope before choosing this update.
 
 ## Integration boundary
