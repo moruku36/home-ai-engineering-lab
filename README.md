@@ -18,7 +18,7 @@ flowchart LR
       N8N["n8n<br/>workflow automation"]
       JOBS["python-jobs<br/>GitHub collection"]
       MCP["mcp-server<br/>read-only report access"]
-      HIST["github-history<br/>history metrics exporter"]
+      HIST["github-history<br/>saved-history adapter"]
       KUMA["Uptime Kuma<br/>service checks"]
       NODE["node_exporter<br/>host metrics"]
       PROM["Prometheus<br/>metrics collection"]
@@ -39,7 +39,6 @@ flowchart LR
   JOBS -->|"write"| DATA
   N8N -->|"read via MCP"| MCP
   MCP -->|"read-only"| DATA
-  PROM -->|"scrape"| HIST
   PROM -->|"scrape"| NODE
   GRAF -->|"query"| PROM
   KUMA -.->|"health checks"| N8N
@@ -48,7 +47,7 @@ flowchart LR
   ISO -->|"offline transfer"| VM
 ```
 
-Prometheus pulls metrics from exporters; the history arrow indicates that metrics are exposed for collection, not that the exporter pushes them. Workbench and REA are separate tools; their integration is not implemented. The VM has no virtual NIC, so the diagram does not assume SSH to the guest. See [VM details](docs/security-analysis-vm.md) and [architecture notes](docs/architecture.md); older diagrams may reflect earlier stages.
+Prometheus pulls metrics from node_exporter. The history adapter runs, but its dashboard integration is not verified. Workbench and REA are separate tools; their integration is not implemented. The VM has no virtual NIC, so the diagram does not assume SSH to the guest. See [VM details](docs/security-analysis-vm.md) and [architecture notes](docs/architecture.md); older diagrams may reflect earlier stages.
 
 ## Components
 
@@ -57,7 +56,7 @@ Prometheus pulls metrics from exporters; the history arrow indicates that metric
 | Compose | n8n 2.44.7 | Orchestrates workflows, including the GitHub daily report. Manual execution was verified; scheduled execution remains unverified. |
 | Compose | python-jobs | Calls the GitHub API and saves reports and snapshots. Running image and current source correspondence is unverified. |
 | Compose | mcp-server | Provides authenticated, read-only access to saved reports. n8n reading was verified; running image and current source correspondence is unverified. |
-| Compose | github-history | Exposes GitHub history metrics for observability. The running container uses read-only source mounts. |
+| Compose | github-history | Serves retained GitHub history. The running container uses read-only source mounts; dashboard integration is unverified. |
 | Compose | Prometheus 3.15.1, node_exporter 1.12.1 | Collect and expose metrics; Prometheus readiness and three targets were checked. |
 | Compose | Grafana 12.4.14 | Queries and visualizes metrics. Its API reported the database healthy; browser dashboard display remains unverified. |
 | Compose | Uptime Kuma 2.5.6 | Checks service availability. Notification delivery and collector push setup remain unverified or unconfigured. |

@@ -18,7 +18,7 @@ flowchart LR
       N8N["n8n<br/>ワークフロー自動化"]
       JOBS["python-jobs<br/>GitHub情報の収集"]
       MCP["mcp-server<br/>レポートの読み取り"]
-      HIST["github-history<br/>履歴メトリクスの公開"]
+      HIST["github-history<br/>保存済み履歴の提供"]
       KUMA["Uptime Kuma<br/>サービスの死活監視"]
       NODE["node_exporter<br/>ホストのメトリクス"]
       PROM["Prometheus<br/>メトリクス収集"]
@@ -39,7 +39,6 @@ flowchart LR
   JOBS -->|"保存"| DATA
   N8N -->|"MCP経由で参照"| MCP
   MCP -->|"読み取り専用"| DATA
-  PROM -->|"収集"| HIST
   PROM -->|"収集"| NODE
   GRAF -->|"問い合わせ"| PROM
   KUMA -.->|"死活確認"| N8N
@@ -57,7 +56,7 @@ Workbench と REA は独立したツールで、相互連携は未実装です�
 | Compose | n8n 2.44.7 | GitHub 日次レポートなどのワークフローを実行。手動実行は確認済み、定期実行は未確認。 |
 | Compose | python-jobs | GitHub API から情報を収集し、レポートとスナップショットを保存。稼働中のイメージと現在のソースの対応は未確認。 |
 | Compose | mcp-server | 保存済みレポートを認証付き・読み取り専用で提供。n8n からの読み取りは確認済み。イメージと現在のソースの対応は未確認。 |
-| Compose | github-history | GitHub の履歴を監視用メトリクスとして公開。稼働中のコンテナはソースを読み取り専用でマウント。 |
+| Compose | github-history | 保存済みの GitHub 履歴を提供。稼働中のコンテナはソースを読み取り専用でマウント。ダッシュボードとの連携は未確認。 |
 | Compose | Prometheus 3.15.1、node_exporter 1.12.1 | メトリクスを公開・収集。Prometheus の準備完了と3つの収集先を確認済み。 |
 | Compose | Grafana 12.4.14 | メトリクスを問い合わせ、可視化。API でデータベースの正常応答を確認済み。ブラウザでの表示は未確認。 |
 | Compose | Uptime Kuma 2.5.6 | サービスの死活を監視。通知配送と収集ジョブの Push は未確認または未設定。 |
