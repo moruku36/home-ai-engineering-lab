@@ -36,6 +36,7 @@ READMEは言語別ページです。詳細資料は各資料の既存の言語�
 | [local-gpu-deployment-guide.md](local-gpu-deployment-guide.md) | JA + EN | Inactive deployment guide, tunnel setup, and deployment gates / デプロイ手順案・トンネル設計・承認ゲート |
 | [local-gpu-ops-runbook.md](local-gpu-ops-runbook.md) | JA + EN | Operations runbook, handling Windows offline, human triage / 運用手順書・Windows停止時対応・トリアージ |
 | [local-gpu-benchmark-results.md](local-gpu-benchmark-results.md) | JA + EN | Unmeasured status, confirmed specs, and future benchmark protocol / ベンチマーク結果（未測定）と測定プロトコル案 |
+| [mac-mini-local-ai-plan.md](mac-mini-local-ai-plan.md) | EN + JA | Pre-purchase plan for local AI on a Mac mini (M4, 16 GB); nothing bought, installed or measured / Mac mini ローカルAIの購入前計画（未購入・未導入・未測定） |
 | [openclaw-trial-idea.md](openclaw-trial-idea.md) | JA + EN | OpenClaw trial idea for the lab: isolated, no personal credentials, not scheduled / OpenClaw のラボ実験アイデア（隔離・資格情報なし・時期未定） |
 | [offline-oss-trial-preparation.md](offline-oss-trial-preparation.md) | EN + JA | Offline model-output comparison and untested OpenClaw probe / オフライン比較と未実行の検証案 |
 
