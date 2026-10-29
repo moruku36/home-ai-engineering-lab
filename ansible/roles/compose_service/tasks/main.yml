@@ -1,0 +1,94 @@
+---
+- name: Require explicit scope and private project details
+  ansible.builtin.assert:
+    that:
+      - home_lab_apply_enabled | bool
+      - home_lab_service == 'prometheus'
+      - home_lab_compose_project == 'observability'
+      - home_lab_project_src is match('^/')
+      - home_lab_ready_url is match('^http://127[.]0[.]0[.]1:[0-9]+/-/ready$')
+      - home_lab_override_filename == '.home-lab-ansible-prometheus.yml'
+      - home_lab_image_override == '' or home_lab_image_override is match('^prom/prometheus:(v[0-9]+[.][0-9]+[.][0-9]+)(@sha256:[a-f0-9]{64})?$')
+    fail_msg: Explicitly enable the supported target and supply its private Compose path and local readiness URL.
+
+- name: Verify the selected existing container belongs to the intended project
+  ansible.builtin.command:
+    argv:
+      - docker
+      - inspect
+      - --format
+      - '{{ "{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}|{{.State.Status}}|{{index .Config.Labels \"com.docker.compose.project.config_files\"}}|{{index .Config.Labels \"com.docker.compose.project.working_dir\"}}" }}'
+      - prometheus
+  register: home_lab_compose_identity
+  changed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Refuse a different or stopped existing target
+  ansible.builtin.assert:
+    that:
+      - home_lab_compose_identity.stdout in ['observability|prometheus|running|' ~ home_lab_project_src ~ '/compose.yaml|' ~ home_lab_project_src, 'observability|prometheus|running|' ~ home_lab_project_src ~ '/compose.yaml,' ~ home_lab_project_src ~ '/' ~ home_lab_override_filename ~ '|' ~ home_lab_project_src]
+    fail_msg: Existing target does not match the expected running Compose service.
+
+- name: Inspect any existing image override
+  ansible.builtin.stat:
+    path: '{{ home_lab_project_src }}/{{ home_lab_override_filename }}'
+    follow: false
+  register: home_lab_override_stat
+  when: home_lab_image_override | length > 0
+
+- name: Read existing override only when it is a regular file
+  ansible.builtin.slurp:
+    src: '{{ home_lab_project_src }}/{{ home_lab_override_filename }}'
+  register: home_lab_override_existing
+  no_log: true
+  when:
+    - home_lab_image_override | length > 0
+    - home_lab_override_stat.stat.exists
+    - home_lab_override_stat.stat.isreg | default(false)
+    - not (home_lab_override_stat.stat.islnk | default(false))
+
+- name: Refuse to overwrite an unrelated existing file
+  ansible.builtin.assert:
+    that:
+      - not home_lab_override_stat.stat.exists or (home_lab_override_stat.stat.isreg | default(false) and not (home_lab_override_stat.stat.islnk | default(false)) and (home_lab_override_existing.content | default('') | b64decode).startswith('# Managed by HomeLab Ansible; image override only.\n'))
+  no_log: true
+  when: home_lab_image_override | length > 0
+
+- name: Write the selected image override without modifying the original Compose file
+  ansible.builtin.template:
+    src: image-override.yml.j2
+    dest: '{{ home_lab_project_src }}/{{ home_lab_override_filename }}'
+    mode: '0600'
+  no_log: true
+  when: home_lab_image_override | length > 0
+
+- name: Apply only the selected service using the original Compose definition
+  community.docker.docker_compose_v2:
+    project_src: '{{ home_lab_project_src }}'
+    project_name: '{{ home_lab_compose_project }}'
+    files: "{{ ['compose.yaml'] + ([home_lab_override_filename] if home_lab_image_override | length > 0 else []) }}"
+    services: ['{{ home_lab_service }}']
+    state: present
+    dependencies: false
+    build: never
+    pull: missing
+    recreate: auto
+    remove_orphans: false
+    renew_anon_volumes: false
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Wait for Prometheus readiness
+  ansible.builtin.uri:
+    url: '{{ home_lab_ready_url }}'
+    status_code: 200
+    timeout: 5
+    use_proxy: false
+  register: home_lab_ready
+  retries: 24
+  delay: 5
+  until: home_lab_ready.status | default(0) == 200
+  when: not ansible_check_mode
+  changed_when: false
+  no_log: true

@@ -1,0 +1,7 @@
+---
+- name: Apply one existing Compose service
+  hosts: home_lab
+  gather_facts: false
+  become: true
+  roles:
+    - compose_service

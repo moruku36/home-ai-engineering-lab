@@ -1,0 +1,4 @@
+# Managed by HomeLab Ansible; image override only.
+services:
+  {{ home_lab_service }}:
+    image: {{ home_lab_image_override | to_json }}

@@ -2,8 +2,8 @@
 
 The existing HomeLab construction playbooks were not found in the repository
 or the limited host search. This is a minimal, new baseline; reconcile it with
-the existing source if it is located. It does not deploy Compose, change images,
-perform backups, restore data, or grant permissions.
+the existing source if it is located. The service apply role is a review candidate
+and has not yet been exercised on the lab.
 
 The role declares the initial desired image tags based on the owner's previous
 observations. They are not a current inventory: see the separate
@@ -34,8 +34,17 @@ not proof that declared images are deployed.
 container and compares its image reference and state with the baseline. It
 requires Docker access and does not create or update containers. This is not a
 complete comparison of Compose mounts, ports, environment or volume contents.
-The requested equivalent Compose application and version-changing roles remain
-unimplemented; the playbooks here cannot yet recreate or update the lab.
+
+`apply-service.yml` is a draft for the existing Prometheus service only. It
+requires explicit enablement and private project details, checks Compose identity,
+uses the existing Compose file and applies only that service with dependencies
+disabled and no volume or orphan removal. An optional image-only override allows
+a fixed Prometheus tag or digest. It performs a loopback readiness check after
+applying. It can restart or recreate Prometheus. Before use, compare the current
+running service with the effective Compose configuration: this role does not
+establish that runtime mounts, ports or other settings match. It does not recreate
+the entire lab. The role and its idempotency remain untested. Check mode skips
+the Compose application and readiness check.
 
 The owner accepts proceeding without an additional backup or restore test.
 Existing encrypted backups and volumes must be retained. Ansible configuration
