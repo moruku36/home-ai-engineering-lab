@@ -1,0 +1,42 @@
+# Configuration status and Ansible integration
+
+This is a non-secret observation record, not an inventory, a deployment manifest,
+or proof that the desired configuration has been applied. The HomeLab construction
+Ansible source has not yet been located in this repository. Integrate with that
+source once identified; do not create a second controller or state database.
+
+## Observed host services
+
+The owner supplied container status on 2026-10-28. These observations are not a
+fresh scan and do not establish the latest available or desired versions.
+
+| Component | Observed | Limit |
+| --- | --- | --- |
+| Prometheus | 3.15.0, running | A proposed 3.15.1 update has not been applied. |
+| Grafana OSS | 12.4.3, running | Backup and update verification remain open. |
+| n8n | 2.44.6, running | Backup and update verification remain open. |
+| node_exporter | 1.12.1, running | No update verified. |
+| Uptime Kuma | Running | Exact version not confirmed. |
+| Open WebUI | Stopped, data retained | Not an update target until its treatment is agreed. |
+| Local jobs and MCP | Running | Source and deployed image correspondence not established. |
+| KVM analysis tools | Not freshly inspected | Host observations do not establish guest versions. |
+
+Prometheus readiness and health subsequently returned HTTP 200, with three of
+three configured scrape targets up. An encrypted backup was created and its
+stored checksums matched; independent checksum provenance and isolated restore
+remain unverified. The restore attempt did not complete. Preserve the backup and
+the existing recovery identity; generating a new key cannot decrypt old backups.
+
+## Integration boundary
+
+When the existing Ansible source and its owner are identified, record desired
+image versions and digests there, independently from observed versions and the
+result of each application. Add service-specific health, backup and rollback
+tasks to the existing roles only after their actual inputs, dependencies and
+recovery procedure are verified. A syntax check or Ansible check mode is not
+evidence of a successful deployment or a guarantee of zero changes.
+
+Keep actual inventories, connection details, secrets, recovery identities,
+private paths and raw logs out of this public repository. Publish only sanitized
+configuration, observations, verification dates and operating guidance. Do not
+change running services merely to make this record match a desired version.

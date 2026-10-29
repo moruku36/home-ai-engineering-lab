@@ -29,6 +29,8 @@ Detailed evidence: [build progress](docs/build-progress.md). Newer topic-specifi
 
 Latest maintenance record: [Brotli security response and n8n update, 2026-10-25](docs/brotli-n8n-update-2026-10-25.md) (Japanese; verified scope and remaining checks).
 
+Shared configuration observations and Ansible integration status: [configuration status](docs/configuration-status.md).
+
 ## Architecture
 
 | Layer | Components and boundary |
