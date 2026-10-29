@@ -1,0 +1,6 @@
+---
+- name: Validate an explicitly requested upgrade proposal
+  hosts: home_lab
+  gather_facts: false
+  roles:
+    - upgrade_gate

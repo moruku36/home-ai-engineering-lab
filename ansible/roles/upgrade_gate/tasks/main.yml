@@ -1,0 +1,14 @@
+---
+- name: Reject upgrades without explicit scope and recovery evidence
+  ansible.builtin.assert:
+    that:
+      - home_lab_upgrade_enabled | bool
+      - home_lab_upgrade_target in home_lab_upgrade_known_targets
+      - home_lab_restore_verified_for == home_lab_upgrade_target
+      - home_lab_restore_evidence | trim | length > 0
+    fail_msg: Upgrade proposal rejected; enable it, specify one target, and record that target's isolated restore evidence.
+    success_msg: Proposal inputs are present; no service update has been implemented or performed.
+
+- name: Stop because upgrade execution is not implemented
+  ansible.builtin.fail:
+    msg: The gate is review-only; no upgrade action is implemented.
