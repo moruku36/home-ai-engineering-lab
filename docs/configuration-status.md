@@ -57,6 +57,12 @@ The node_exporter release list still identifies 1.12.1 as its latest release.
 Uptime Kuma's UI returned HTTP 200 and the owner confirmed version 2.5.6. Release
 2.5.8 is available; its release notes say existing TCP monitors using TLS become
 ordinary TCP monitors, so inspect the monitor scope before choosing this update.
+The first aggregate diagnostic returned an unconfirmed result. It assumed the
+`sqlite3` Node module; the 2.5.6 upstream package instead lists `mysql2`, so that
+assumption is a plausible cause but has not been verified on the live container.
+The replacement checks module and local socket availability and, if possible,
+uses a read-only transaction to report only aggregate TCP/TLS counts. Its live
+result is pending and no credential values are read or printed.
 
 ## Integration boundary
 
