@@ -17,12 +17,25 @@
       - docker
       - inspect
       - --format
-      - '{{ "{{index .Config.Labels \"com.docker.compose.project\"}}|{{index .Config.Labels \"com.docker.compose.service\"}}|{{.State.Status}}|{{index .Config.Labels \"com.docker.compose.project.config_files\"}}|{{index .Config.Labels \"com.docker.compose.project.working_dir\"}}" }}'
+      - '{% raw %}{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.State.Status}}|{{index .Config.Labels "com.docker.compose.project.config_files"}}|{{index .Config.Labels "com.docker.compose.project.working_dir"}}{% endraw %}'
       - prometheus
   register: home_lab_compose_identity
   changed_when: false
+  failed_when: false
   check_mode: false
   no_log: true
+
+- name: Report a sanitized Docker inspection failure
+  ansible.builtin.fail:
+    msg: >-
+      Docker inspection failed (rc={{ home_lab_compose_identity.rc | default('unavailable') }};
+      category={{ 'permission denied' if 'permission denied' in (home_lab_compose_identity.stderr | default('') | lower)
+      else 'Docker daemon unavailable' if 'cannot connect to the docker daemon' in (home_lab_compose_identity.stderr | default('') | lower)
+      else 'container not found' if 'no such object' in (home_lab_compose_identity.stderr | default('') | lower)
+      else 'format or template error' if 'template' in (home_lab_compose_identity.stderr | default('') | lower)
+      else 'command or Docker error' }}).
+      No service changes were attempted.
+  when: (home_lab_compose_identity.rc | default(-1) | int) != 0
 
 - name: Refuse a different or stopped existing target
   ansible.builtin.assert:
