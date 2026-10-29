@@ -1,0 +1,74 @@
+# Configuration status and Ansible integration
+
+This is a non-secret observation record, not an inventory, a deployment manifest,
+or proof that the desired configuration has been applied. The HomeLab construction
+Ansible source has not yet been located in this repository. A new, read-only
+[Ansible baseline](../ansible/README.md) is available for review; reconcile it
+with the construction source if found. It is not a second state database.
+
+## Observed host services
+
+The owner supplied container status on 2026-10-28. These observations are not a
+fresh scan and do not establish the latest available or desired versions.
+
+| Component | Observed | Limit |
+| --- | --- | --- |
+| Prometheus | 3.15.1, running | Readiness HTTP 200 and 3/3 targets up after the owner-reported update. |
+| Grafana OSS | 12.4.14, running | API reports database ok; role idempotency not yet checked. |
+| n8n | 2.44.7, running | Owner confirmed the running version; health and readiness HTTP 200. |
+| node_exporter | 1.12.1, running | No update verified. |
+| Uptime Kuma | 2.5.6, running | Owner requested no update; service remains in place. |
+| Open WebUI | Stopped, data retained | Not an update target until its treatment is agreed. |
+| Local jobs and MCP | Running | Source and deployed image correspondence not established. |
+| KVM analysis tools | Not freshly inspected | Host observations do not establish guest versions. |
+
+Prometheus readiness and health subsequently returned HTTP 200, with three of
+three configured scrape targets up. An encrypted backup was created and its
+stored checksums matched; independent checksum provenance and isolated restore
+remain unverified. The restore attempt did not complete. Preserve the backup and
+the existing recovery identity; generating a new key cannot decrypt old backups.
+
+On 2026-10-29 the owner reported the targeted baseline Ansible command succeeded.
+The recap and change count were not provided. A subsequent nonprivileged read
+confirmed Prometheus readiness HTTP 200 and build version 3.15.0; it did not
+independently inspect Docker volumes. After the owner reported the subsequent
+update, another read confirmed version 3.15.1, readiness HTTP 200 and 3/3 targets
+up. Post-update volume identity and the Ansible recap remain unverified.
+
+The first Grafana patch attempt stopped at its Compose identity assertion with
+`changed=0`; its health endpoint still reported 12.4.3 and database ok. The
+identity mismatch was traced to a root-owned external Compose override containing
+network configuration and definitions for other services. The revised candidate
+preserves that file and its original order, checks its recorded hash, and rejects
+any effective change beyond the Grafana image. The owner reported the revised
+apply succeeded with `changed=2`, and the Grafana API subsequently reported
+12.4.14 and database ok. Prometheus remained ready with 3/3 targets up. A second
+apply and Grafana dashboard-level verification have not been performed.
+
+The repository's n8n Compose image reference was observed as 2.43.5, while the
+previously reported running n8n version was 2.44.6. Health returned HTTP 200.
+The documented deployed Compose file matched the owner's recorded hash. Its
+image refers to the observed local image digest, rather than the repository's
+older tag. The owner confirmed the running n8n version is 2.44.7 after the scoped
+update. Subsequent health and readiness endpoints returned HTTP 200; the full
+Ansible recap and a second application remain unverified.
+
+The node_exporter release list still identifies 1.12.1 as its latest release.
+Uptime Kuma's UI returned HTTP 200 and the owner confirmed version 2.5.6. The
+owner subsequently requested no Kuma update or further TLS diagnostics. Earlier
+TLS usage checks were inconclusive; no change to the service or its monitoring
+configuration has been made as part of this decision.
+
+## Integration boundary
+
+Record desired image versions and digests independently from observed versions
+and the result of each application. The owner accepts updates without an
+additional backup or restore test. Preserve existing backups and data, and add
+service-specific apply and health tasks after their actual inputs and dependencies
+are understood. A syntax check or Ansible check mode is not
+evidence of a successful deployment or a guarantee of zero changes.
+
+Keep actual inventories, connection details, secrets, recovery identities,
+private paths and raw logs out of this public repository. Publish only sanitized
+configuration, observations, verification dates and operating guidance. Do not
+change running services merely to make this record match a desired version.

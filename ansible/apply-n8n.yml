@@ -1,0 +1,7 @@
+---
+- name: Apply the existing n8n service only
+  hosts: home_lab
+  gather_facts: false
+  become: true
+  roles:
+    - n8n_service

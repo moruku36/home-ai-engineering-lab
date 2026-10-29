@@ -1,0 +1,6 @@
+---
+home_lab_verify_target: ''
+home_lab_expected_images:
+  prometheus: prom/prometheus:v3.15.1@sha256:d445d1806b38f85b5c394a1b87f94113fde0473b45245922c2e8b1bd41fa68ae
+  grafana: grafana/grafana:12.4.14@sha256:1b59d2076a5e08e0e9929a1225f37869ee7719f4a11c004fbfcfa8b772858e89
+  node-exporter: prom/node-exporter:v1.12.1

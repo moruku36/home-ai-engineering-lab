@@ -1,0 +1,16 @@
+---
+# Initial desired baseline equals previously observed versions; it is not a live scan.
+home_lab_desired_images:
+  prometheus: prom/prometheus:v3.15.1@sha256:d445d1806b38f85b5c394a1b87f94113fde0473b45245922c2e8b1bd41fa68ae
+  grafana: grafana/grafana:12.4.14@sha256:1b59d2076a5e08e0e9929a1225f37869ee7719f4a11c004fbfcfa8b772858e89
+  node_exporter: prom/node-exporter:v1.12.1
+  n8n: n8nio/n8n:2.44.7@sha256:7a7708314f9b1d0656e2e7f697abb64fae5f76e1895f0a9ccb9036c3933a0394
+home_lab_desired_versions:
+  prometheus: '3.15.1'
+  grafana: '12.4.14'
+  n8n: '2.44.7'
+  node_exporter: '1.12.1'
+  uptime_kuma: '2.5.6'
+# n8n 2.44.7 was confirmed by the owner after the update.
+# The current Uptime Kuma image uses a floating tag; its digest remains unconfirmed.
+home_lab_prometheus_ready_url: ''

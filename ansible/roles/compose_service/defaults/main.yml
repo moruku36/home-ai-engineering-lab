@@ -1,0 +1,9 @@
+---
+home_lab_apply_enabled: false
+home_lab_service: ''
+home_lab_project_src: ''
+home_lab_compose_project: ''
+home_lab_ready_url: ''
+# Empty means preserve the image reference in the original Compose file.
+home_lab_image_override: ''
+home_lab_override_filename: .home-lab-ansible-prometheus.yml

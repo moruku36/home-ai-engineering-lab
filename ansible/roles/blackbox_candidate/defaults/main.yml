@@ -1,0 +1,7 @@
+---
+home_lab_probe_files_write_enabled: false
+home_lab_probe_output_dir: ''
+home_lab_blackbox_endpoint: ''
+home_lab_n8n_probe_target: ''
+home_lab_mcp_probe_target: ''
+home_lab_ssh_probe_target: ''

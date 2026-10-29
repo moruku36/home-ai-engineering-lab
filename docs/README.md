@@ -37,6 +37,7 @@ READMEは言語別ページです。詳細資料は各資料の既存の言語�
 | [local-gpu-ops-runbook.md](local-gpu-ops-runbook.md) | JA + EN | Operations runbook, handling Windows offline, human triage / 運用手順書・Windows停止時対応・トリアージ |
 | [local-gpu-benchmark-results.md](local-gpu-benchmark-results.md) | JA + EN | Unmeasured status, confirmed specs, and future benchmark protocol / ベンチマーク結果（未測定）と測定プロトコル案 |
 | [openclaw-trial-idea.md](openclaw-trial-idea.md) | JA + EN | OpenClaw trial idea for the lab: isolated, no personal credentials, not scheduled / OpenClaw のラボ実験アイデア（隔離・資格情報なし・時期未定） |
+| [offline-oss-trial-preparation.md](offline-oss-trial-preparation.md) | EN + JA | Offline model-output comparison and untested OpenClaw probe / オフライン比較と未実行の検証案 |
 
 ## Network visibility / 家庭ネットワーク可視化
 
@@ -49,6 +50,7 @@ READMEは言語別ページです。詳細資料は各資料の既存の言語�
 
 | Doc | Language | About / 内容 |
 |---|---|---|
+| [security-collection-trial-2026-10.md](security-collection-trial-2026-10.md) | EN | Defender and Dependabot trial observations, review candidate and outstanding checks |
 | [security-operations.md](security-operations.md) | JA | Security controls, credential handling, what to do if a secret leaks / セキュリティ運用・漏えい時の対応 |
 | [security-analysis-vm.md](security-analysis-vm.md) | JA | Current VM architecture, limited results and acceptance boundaries / VMの現在構成・限定試験結果・受入れ範囲（A条件付き受入れ、B未受入れ） |
 | [ai-api-key-management.md](ai-api-key-management.md) | JA | Storing / rotating LLM API keys, cost limits. **Open WebUI is stopped, so this is parked** / APIキー管理（Open WebUI停止中のため保留） |

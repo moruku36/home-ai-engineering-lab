@@ -1,0 +1,7 @@
+---
+- name: Apply existing Grafana only
+  hosts: home_lab
+  gather_facts: false
+  become: true
+  roles:
+    - grafana_service
