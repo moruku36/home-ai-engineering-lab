@@ -13,7 +13,7 @@ fresh scan and do not establish the latest available or desired versions.
 
 | Component | Observed | Limit |
 | --- | --- | --- |
-| Prometheus | 3.15.0, running | A proposed 3.15.1 update has not been applied. |
+| Prometheus | 3.15.1, running | Readiness HTTP 200 and 3/3 targets up after the owner-reported update. |
 | Grafana OSS | 12.4.3, running | Backup and update verification remain open. |
 | n8n | 2.44.6, running | Backup and update verification remain open. |
 | node_exporter | 1.12.1, running | No update verified. |
@@ -31,8 +31,9 @@ the existing recovery identity; generating a new key cannot decrypt old backups.
 On 2026-10-29 the owner reported the targeted baseline Ansible command succeeded.
 The recap and change count were not provided. A subsequent nonprivileged read
 confirmed Prometheus readiness HTTP 200 and build version 3.15.0; it did not
-independently inspect Docker volumes. Version 3.15.1 is a desired candidate and
-has not yet been confirmed running.
+independently inspect Docker volumes. After the owner reported the subsequent
+update, another read confirmed version 3.15.1, readiness HTTP 200 and 3/3 targets
+up. Post-update volume identity and the Ansible recap remain unverified.
 
 ## Integration boundary
 

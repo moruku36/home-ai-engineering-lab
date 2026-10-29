@@ -1,0 +1,95 @@
+---
+- name: Require explicit Grafana scope and a fixed official image
+  ansible.builtin.assert:
+    that:
+      - home_lab_apply_enabled | bool
+      - home_lab_project_src is match('^/')
+      - home_lab_image_override is match('^grafana/grafana:12[.]4[.]14@sha256:1b59d2076a5e08e0e9929a1225f37869ee7719f4a11c004fbfcfa8b772858e89$')
+    fail_msg: Explicitly enable Grafana and supply its private Compose project path and fixed image.
+
+- name: Read only Grafana Compose identity
+  ansible.builtin.command:
+    argv:
+      - docker
+      - inspect
+      - --format
+      - '{% raw %}{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.State.Status}}|{{index .Config.Labels "com.docker.compose.project.config_files"}}|{{index .Config.Labels "com.docker.compose.project.working_dir"}}{% endraw %}'
+      - grafana
+  register: grafana_identity
+  changed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Reject an unrelated or stopped container
+  ansible.builtin.assert:
+    that:
+      - grafana_identity.stdout in ['observability|grafana|running|' ~ home_lab_project_src ~ '/compose.yaml|' ~ home_lab_project_src, 'observability|grafana|running|' ~ home_lab_project_src ~ '/compose.yaml,' ~ home_lab_project_src ~ '/.home-lab-ansible-grafana.yml|' ~ home_lab_project_src]
+    fail_msg: Grafana does not match the expected running Compose service.
+
+- name: Compare effective configuration and runtime volume, bind mount and port
+  ansible.builtin.script:
+    cmd: 'compare_grafana.py {{ home_lab_project_src | quote }}'
+    executable: python3
+  changed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Check for an existing override
+  ansible.builtin.stat:
+    path: '{{ home_lab_project_src }}/.home-lab-ansible-grafana.yml'
+    follow: false
+  register: grafana_override
+
+- name: Read an existing regular override
+  ansible.builtin.slurp:
+    src: '{{ home_lab_project_src }}/.home-lab-ansible-grafana.yml'
+  register: grafana_override_contents
+  no_log: true
+  when:
+    - grafana_override.stat.exists
+    - grafana_override.stat.isreg | default(false)
+    - not (grafana_override.stat.islnk | default(false))
+
+- name: Refuse an unrelated override file
+  ansible.builtin.assert:
+    that:
+      - not grafana_override.stat.exists or (grafana_override.stat.isreg | default(false) and not (grafana_override.stat.islnk | default(false)) and (grafana_override_contents.content | default('') | b64decode).startswith('# Managed by HomeLab Ansible; Grafana image override only.\n'))
+  no_log: true
+
+- name: Write only the Grafana image override
+  ansible.builtin.template:
+    src: image-override.yml.j2
+    dest: '{{ home_lab_project_src }}/.home-lab-ansible-grafana.yml'
+    mode: '0600'
+  no_log: true
+
+- name: Apply Grafana without dependencies or volume removal
+  community.docker.docker_compose_v2:
+    project_src: '{{ home_lab_project_src }}'
+    project_name: observability
+    files: [compose.yaml, .home-lab-ansible-grafana.yml]
+    services: [grafana]
+    state: present
+    dependencies: false
+    build: never
+    pull: missing
+    recreate: auto
+    remove_orphans: false
+    renew_anon_volumes: false
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Wait for Grafana and its database
+  ansible.builtin.uri:
+    url: http://127.0.0.1:3000/api/health
+    status_code: 200
+    timeout: 5
+    use_proxy: false
+    return_content: true
+  register: grafana_health
+  retries: 24
+  delay: 5
+  until: grafana_health.status | default(0) == 200 and grafana_health.json.database | default('') == 'ok'
+  changed_when: false
+  no_log: true
+  when: not ansible_check_mode

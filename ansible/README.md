@@ -7,11 +7,17 @@ and has not yet been exercised on the lab.
 
 The role declares the initial desired image tags based on the owner's previous
 observations. They are not a current inventory: see the separate
-[observation record](../docs/configuration-status.md). Prometheus 3.15.1 is a
-desired upgrade candidate in `vars/prometheus-3.15.1.yml`, not a confirmed
-running version. The n8n image tag,
+[observation record](../docs/configuration-status.md). Prometheus 3.15.1 is
+the desired version and was subsequently confirmed running. The n8n image tag,
 Kuma version, guest tools and image digests remain unconfirmed. A future change
 must verify and pin the relevant digest before applying an image update.
+
+Grafana 12.4.14 is a candidate, not yet applied. Grafana's official Docker
+documentation says that `grafana/grafana` provides the OSS image and replaces
+the no-longer-updated `grafana/grafana-oss` repository. The Prometheus-only
+apply role cannot apply this candidate. `apply-grafana.yml` is a separate draft
+role with runtime volume, provisioning, port and health checks; it has not yet
+been applied to the live service or validated for idempotency.
 
 Copy `inventory.example.yml` to the ignored `inventory.local.yml` and fill in
 connection details locally. Keep identity files, vault passwords, real hosts,
