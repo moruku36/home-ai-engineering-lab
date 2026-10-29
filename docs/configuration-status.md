@@ -37,9 +37,10 @@ up. Post-update volume identity and the Ansible recap remain unverified.
 
 The first Grafana patch attempt stopped at its Compose identity assertion with
 `changed=0`; its health endpoint still reported 12.4.3 and database ok. The
-exact identity mismatch has not been diagnosed. The revised candidate recognizes
-only the original Compose file and the two named Ansible image overrides, with
-normalized paths and order-independent comparison; unknown files are rejected.
+identity mismatch was traced to a root-owned external Compose override containing
+network configuration and definitions for other services. The revised candidate
+preserves that file and its original order, checks its recorded hash, and rejects
+any effective change beyond the Grafana image. This candidate is not live-tested.
 
 ## Integration boundary
 
