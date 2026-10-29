@@ -35,6 +35,12 @@ independently inspect Docker volumes. After the owner reported the subsequent
 update, another read confirmed version 3.15.1, readiness HTTP 200 and 3/3 targets
 up. Post-update volume identity and the Ansible recap remain unverified.
 
+The first Grafana patch attempt stopped at its Compose identity assertion with
+`changed=0`; its health endpoint still reported 12.4.3 and database ok. The
+exact identity mismatch has not been diagnosed. The revised candidate recognizes
+only the original Compose file and the two named Ansible image overrides, with
+normalized paths and order-independent comparison; unknown files are rejected.
+
 ## Integration boundary
 
 Record desired image versions and digests independently from observed versions

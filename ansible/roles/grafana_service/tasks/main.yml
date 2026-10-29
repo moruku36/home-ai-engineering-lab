@@ -7,24 +7,20 @@
       - home_lab_image_override is match('^grafana/grafana:12[.]4[.]14@sha256:1b59d2076a5e08e0e9929a1225f37869ee7719f4a11c004fbfcfa8b772858e89$')
     fail_msg: Explicitly enable Grafana and supply its private Compose project path and fixed image.
 
-- name: Read only Grafana Compose identity
-  ansible.builtin.command:
-    argv:
-      - docker
-      - inspect
-      - --format
-      - '{% raw %}{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.State.Status}}|{{index .Config.Labels "com.docker.compose.project.config_files"}}|{{index .Config.Labels "com.docker.compose.project.working_dir"}}{% endraw %}'
-      - grafana
-  register: grafana_identity
+- name: Check the normalized Grafana Compose identity and approved file set
+  ansible.builtin.script:
+    cmd: 'inspect_grafana_scope.py {{ home_lab_project_src | quote }}'
+    executable: python3
+  register: grafana_scope
   changed_when: false
   check_mode: false
+  failed_when: false
   no_log: true
 
-- name: Reject an unrelated or stopped container
-  ansible.builtin.assert:
-    that:
-      - grafana_identity.stdout in ['observability|grafana|running|' ~ home_lab_project_src ~ '/compose.yaml|' ~ home_lab_project_src, 'observability|grafana|running|' ~ home_lab_project_src ~ '/compose.yaml,' ~ home_lab_project_src ~ '/.home-lab-ansible-grafana.yml|' ~ home_lab_project_src]
-    fail_msg: Grafana does not match the expected running Compose service.
+- name: Report a rejected identity without exposing labels or paths
+  ansible.builtin.fail:
+    msg: Grafana identity or file scope was rejected. Run the documented safe identity diagnostic for categories.
+  when: (grafana_scope.rc | default(-1) | int) != 0
 
 - name: Compare effective configuration and runtime volume, bind mount and port
   ansible.builtin.script:
