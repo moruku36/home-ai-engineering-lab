@@ -1,0 +1,4 @@
+---
+# Desired upgrade candidate; observed running version is recorded separately.
+# Linux amd64 manifest digest, not the local Docker image ID.
+home_lab_image_override: prom/prometheus:v3.15.1@sha256:d445d1806b38f85b5c394a1b87f94113fde0473b45245922c2e8b1bd41fa68ae

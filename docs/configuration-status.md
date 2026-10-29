@@ -28,6 +28,12 @@ stored checksums matched; independent checksum provenance and isolated restore
 remain unverified. The restore attempt did not complete. Preserve the backup and
 the existing recovery identity; generating a new key cannot decrypt old backups.
 
+On 2026-10-29 the owner reported the targeted baseline Ansible command succeeded.
+The recap and change count were not provided. A subsequent nonprivileged read
+confirmed Prometheus readiness HTTP 200 and build version 3.15.0; it did not
+independently inspect Docker volumes. Version 3.15.1 is a desired candidate and
+has not yet been confirmed running.
+
 ## Integration boundary
 
 Record desired image versions and digests independently from observed versions

@@ -8,7 +8,8 @@ and has not yet been exercised on the lab.
 The role declares the initial desired image tags based on the owner's previous
 observations. They are not a current inventory: see the separate
 [observation record](../docs/configuration-status.md). Prometheus 3.15.1 is a
-candidate, not the declared or confirmed running version. The n8n image tag,
+desired upgrade candidate in `vars/prometheus-3.15.1.yml`, not a confirmed
+running version. The n8n image tag,
 Kuma version, guest tools and image digests remain unconfirmed. A future change
 must verify and pin the relevant digest before applying an image update.
 
