@@ -28,10 +28,15 @@ def digest(path):
 
 
 def identity(root):
-    data = run_json(['docker', 'inspect', 'n8n'])
-    if len(data) != 1:
-        raise ValueError('inspect')
-    container = data[0]
+    def field(template):
+        return run_json(['docker', 'inspect', '--format', template, 'n8n'])
+    container = {
+        'Config': {'Labels': field('{{json .Config.Labels}}')},
+        'State': {'Status': field('{{json .State.Status}}')},
+        'Mounts': field('{{json .Mounts}}'),
+        'NetworkSettings': {'Ports': field('{{json .NetworkSettings.Ports}}'),
+                            'Networks': field('{{json .NetworkSettings.Networks}}')},
+    }
     labels = container['Config']['Labels']
     if (labels.get('com.docker.compose.project') != 'n8n'
             or labels.get('com.docker.compose.service') != 'n8n'
