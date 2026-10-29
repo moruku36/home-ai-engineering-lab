@@ -1,0 +1,3 @@
+---
+# Candidate only; do not apply until the deployed Compose inputs are identified.
+home_lab_image_override: n8nio/n8n:2.44.7@sha256:7a7708314f9b1d0656e2e7f697abb64fae5f76e1895f0a9ccb9036c3933a0394

@@ -12,15 +12,15 @@ the desired version and was subsequently confirmed running. The n8n image tag,
 Kuma version, guest tools and image digests remain unconfirmed. A future change
 must verify and pin the relevant digest before applying an image update.
 
-Grafana 12.4.14 is a candidate, not yet applied. Grafana's official Docker
+Grafana 12.4.14 was applied and subsequently reported healthy. Grafana's official Docker
 documentation says that `grafana/grafana` provides the OSS image and replaces
 the no-longer-updated `grafana/grafana-oss` repository. The Prometheus-only
 apply role cannot apply this candidate. `apply-grafana.yml` is a separate draft
 role. It preserves the original order of the existing Compose sources, checks
 the identified external override's hash and verifies the resolved configuration
 differs only in Grafana's image before applying. It also checks runtime volume,
-provisioning and port and then health. Its revised path has not yet been applied
-to the live service or validated for idempotency.
+provisioning and port and then health. A second apply to verify idempotency has
+not yet been performed.
 
 Copy `inventory.example.yml` to the ignored `inventory.local.yml` and fill in
 connection details locally. Keep identity files, vault passwords, real hosts,

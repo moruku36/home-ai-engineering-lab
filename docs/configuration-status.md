@@ -14,8 +14,8 @@ fresh scan and do not establish the latest available or desired versions.
 | Component | Observed | Limit |
 | --- | --- | --- |
 | Prometheus | 3.15.1, running | Readiness HTTP 200 and 3/3 targets up after the owner-reported update. |
-| Grafana OSS | 12.4.3, running | Backup and update verification remain open. |
-| n8n | 2.44.6, running | Backup and update verification remain open. |
+| Grafana OSS | 12.4.14, running | API reports database ok; role idempotency not yet checked. |
+| n8n | 2.44.6, running | Candidate 2.44.7; actual Compose source differs from runtime and needs investigation. |
 | node_exporter | 1.12.1, running | No update verified. |
 | Uptime Kuma | Running | Exact version not confirmed. |
 | Open WebUI | Stopped, data retained | Not an update target until its treatment is agreed. |
@@ -40,7 +40,15 @@ The first Grafana patch attempt stopped at its Compose identity assertion with
 identity mismatch was traced to a root-owned external Compose override containing
 network configuration and definitions for other services. The revised candidate
 preserves that file and its original order, checks its recorded hash, and rejects
-any effective change beyond the Grafana image. This candidate is not live-tested.
+any effective change beyond the Grafana image. The owner reported the revised
+apply succeeded with `changed=2`, and the Grafana API subsequently reported
+12.4.14 and database ok. Prometheus remained ready with 3/3 targets up. A second
+apply and Grafana dashboard-level verification have not been performed.
+
+The repository's n8n Compose image reference was observed as 2.43.5, while the
+previously reported running n8n version was 2.44.6. Health returned HTTP 200.
+Inspect the actual deployed Compose inputs before applying any n8n change;
+neither the repository tag nor a newer candidate proves the deployed image.
 
 ## Integration boundary
 
