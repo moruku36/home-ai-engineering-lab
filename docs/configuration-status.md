@@ -49,7 +49,16 @@ The repository's n8n Compose image reference was observed as 2.43.5, while the
 previously reported running n8n version was 2.44.6. Health returned HTTP 200.
 The documented deployed Compose file matched the owner's recorded hash. Its
 image refers to the observed local image digest, rather than the repository's
-older tag. A scoped 2.44.7 role has been prepared but not applied or live-tested.
+older tag. The owner reported that the scoped 2.44.7 command finished; its recap
+was not provided. Subsequent health and readiness endpoints returned HTTP 200,
+but the running version could not be established through the nonprivileged API.
+Do not mark the candidate as applied until its version or successful recap is
+independently confirmed.
+
+The node_exporter release list still identifies 1.12.1 as its latest release.
+Uptime Kuma's UI returned HTTP 200. Release 2.5.8 is available, but the running
+version is unknown; its release notes say existing TCP monitors using TLS become
+ordinary TCP monitors, so inspect the monitor scope before choosing this update.
 
 ## Integration boundary
 

@@ -26,9 +26,11 @@ not yet been performed.
 whose recorded content hash is checked before application. It compares runtime
 volume, loopback port and networks, checks that the effective configuration
 and all other services remain unchanged apart from the n8n image, and checks
-health and version afterwards. The candidate 2.44.7 and this role have not been
-applied or checked for live idempotency. The role does not expose resolved
+health and version afterwards. The role has not been checked for live
+idempotency. The role does not expose resolved
 environment values; it will stop on an unrecognized source or changed inputs.
+The owner reported executing the candidate; health and readiness returned HTTP
+200 afterwards, but the recap and resulting running version are unconfirmed.
 
 Copy `inventory.example.yml` to the ignored `inventory.local.yml` and fill in
 connection details locally. Keep identity files, vault passwords, real hosts,
