@@ -76,6 +76,6 @@ The custom job and MCP source differs from the public snapshot in some files. Do
 
 ## Future direction
 
-Add a Mac mini as a possible on-premises AI research machine. This is a future idea: hardware, model runtime, connectivity and integration are not yet established. The existing NUC services and isolated security guest remain distinct from that proposed work.
+Add a Mac mini as a possible on-premises AI research machine. This is a future idea: hardware, model runtime, connectivity and integration are not yet established. The existing NUC services and isolated security guest remain distinct from that proposed work. The pre-purchase [Mac mini local AI plan](docs/mac-mini-local-ai-plan.md) records the assumptions (M4, 16 GB, 256 GB); nothing is bought, installed or measured.
 
 License: not yet specified.
