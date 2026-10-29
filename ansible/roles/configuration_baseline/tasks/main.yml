@@ -1,0 +1,20 @@
+---
+- name: Validate the declared baseline
+  ansible.builtin.assert:
+    that:
+      - home_lab_desired_images is mapping
+      - home_lab_desired_images.prometheus is defined
+      - home_lab_desired_images.grafana is defined
+      - home_lab_desired_images.node_exporter is defined
+    quiet: true
+
+- name: Check Prometheus readiness when explicitly configured
+  ansible.builtin.uri:
+    url: "{{ home_lab_prometheus_ready_url }}"
+    method: GET
+    status_code: 200
+    timeout: 5
+    return_content: false
+    use_proxy: false
+  when: home_lab_prometheus_ready_url | length > 0
+  no_log: true

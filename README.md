@@ -29,6 +29,12 @@ Detailed evidence: [build progress](docs/build-progress.md). Newer topic-specifi
 
 Latest maintenance record: [Brotli security response and n8n update, 2026-10-25](docs/brotli-n8n-update-2026-10-25.md) (Japanese; verified scope and remaining checks).
 
+Shared configuration observations and Ansible integration status: [configuration status](docs/configuration-status.md).
+
+Availability monitoring proposal: [Prometheus alerting candidate](docs/prometheus-alerts-candidate.md).
+
+Custom component update review: [custom OSS candidate](docs/custom-oss-update-candidate.md).
+
 ## Architecture
 
 | Layer | Components and boundary |

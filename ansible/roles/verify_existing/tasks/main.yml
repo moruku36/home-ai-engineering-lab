@@ -1,0 +1,26 @@
+---
+- name: Require one known service target
+  ansible.builtin.assert:
+    that:
+      - home_lab_verify_target in home_lab_expected_images
+    fail_msg: Select one known target using home_lab_verify_target.
+
+- name: Inspect only the selected container image reference and state
+  ansible.builtin.command:
+    argv:
+      - docker
+      - inspect
+      - --format
+      - '{{ "{{.Config.Image}}|{{.State.Status}}" }}'
+      - '{{ home_lab_verify_target }}'
+  register: home_lab_inspection
+  changed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Compare the selected container with the declared baseline
+  ansible.builtin.assert:
+    that:
+      - home_lab_inspection.stdout == home_lab_expected_images[home_lab_verify_target] + '|running'
+    quiet: true
+    fail_msg: The selected container differs from the declared running baseline.

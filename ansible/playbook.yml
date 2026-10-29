@@ -1,0 +1,6 @@
+---
+- name: Review the HomeLab configuration baseline
+  hosts: home_lab
+  gather_facts: false
+  roles:
+    - configuration_baseline

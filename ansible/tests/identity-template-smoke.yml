@@ -1,0 +1,24 @@
+---
+- name: Check the Docker format argument through Ansible without Docker
+  hosts: localhost
+  gather_facts: false
+  connection: local
+  tasks:
+    - name: Render the same argument through the command module
+      ansible.builtin.command:
+        argv:
+          - python3
+          - -c
+          - 'import sys; print("BACKSLASH" if chr(92) in sys.argv[1] else "CLEAN:" + sys.argv[1])'
+          - '{% raw %}{{index .Config.Labels "com.docker.compose.project"}}|{{index .Config.Labels "com.docker.compose.service"}}|{{.State.Status}}|{{index .Config.Labels "com.docker.compose.project.config_files"}}|{{index .Config.Labels "com.docker.compose.project.working_dir"}}{% endraw %}'
+      register: rendered
+      changed_when: false
+    - name: Display the synthetic format argument
+      ansible.builtin.debug:
+        var: rendered.stdout
+    - name: Check preserved argument characters
+      ansible.builtin.assert:
+        that:
+          - rendered.stdout.startswith('CLEAN:' ~ '{' ~ '{')
+          - rendered.stdout[-2:] == ('}' ~ '}')
+          - "'com.docker.compose.project.working_dir' in rendered.stdout"

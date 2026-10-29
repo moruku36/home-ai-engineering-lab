@@ -1,0 +1,4 @@
+# Managed by HomeLab Ansible; Grafana image override only.
+services:
+  grafana:
+    image: {{ home_lab_image_override | to_json }}

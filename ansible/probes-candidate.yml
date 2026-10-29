@@ -1,0 +1,6 @@
+---
+- name: Stage private blackbox probe configuration candidates
+  hosts: home_lab
+  gather_facts: false
+  roles:
+    - blackbox_candidate

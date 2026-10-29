@@ -1,0 +1,7 @@
+---
+- name: Verify an existing service without modifying it
+  hosts: home_lab
+  gather_facts: false
+  become: true
+  roles:
+    - verify_existing

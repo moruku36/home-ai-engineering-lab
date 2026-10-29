@@ -1,0 +1,23 @@
+scrape_configs:
+  - job_name: home_lab_http_probe
+    metrics_path: /probe
+    params: {module: [http_2xx]}
+    static_configs:
+      - targets: [{{ home_lab_n8n_probe_target | to_json }}]
+        labels: {monitor: n8n}
+      - targets: [{{ home_lab_mcp_probe_target | to_json }}]
+        labels: {monitor: mcp}
+    relabel_configs:
+      - {source_labels: [__address__], target_label: __param_target}
+      - {source_labels: [__param_target], target_label: instance}
+      - {target_label: __address__, replacement: {{ home_lab_blackbox_endpoint | to_json }} }
+  - job_name: home_lab_ssh_probe
+    metrics_path: /probe
+    params: {module: [tcp_connect]}
+    static_configs:
+      - targets: [{{ home_lab_ssh_probe_target | to_json }}]
+        labels: {monitor: ssh}
+    relabel_configs:
+      - {source_labels: [__address__], target_label: __param_target}
+      - {source_labels: [__param_target], target_label: instance}
+      - {target_label: __address__, replacement: {{ home_lab_blackbox_endpoint | to_json }} }

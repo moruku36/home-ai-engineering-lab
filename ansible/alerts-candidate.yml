@@ -1,0 +1,6 @@
+---
+- name: Stage candidate Prometheus alert rules
+  hosts: home_lab
+  gather_facts: false
+  roles:
+    - prometheus_alerts_candidate

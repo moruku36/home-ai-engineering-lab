@@ -1,0 +1,102 @@
+---
+- name: Require explicit n8n scope and fixed official image
+  ansible.builtin.assert:
+    that:
+      - home_lab_apply_enabled | bool
+      - home_lab_project_src is match('^/')
+      - home_lab_image_override == 'n8nio/n8n:2.44.7@sha256:7a7708314f9b1d0656e2e7f697abb64fae5f76e1895f0a9ccb9036c3933a0394'
+    fail_msg: Explicitly enable the candidate and provide the private n8n Compose path.
+
+- name: Check the current inputs and runtime volume, ports and networks
+  ansible.builtin.script:
+    cmd: 'prepare_n8n_compose.py {{ home_lab_project_src | quote }} baseline'
+    executable: python3
+  register: n8n_baseline
+  changed_when: false
+  check_mode: false
+  no_log: true
+
+- name: Inspect any previous managed override
+  ansible.builtin.stat:
+    path: '{{ home_lab_project_src }}/.home-lab-ansible-n8n.yml'
+    follow: false
+  register: n8n_override
+
+- name: Read an existing regular override
+  ansible.builtin.slurp:
+    src: '{{ home_lab_project_src }}/.home-lab-ansible-n8n.yml'
+  register: n8n_override_contents
+  no_log: true
+  when:
+    - n8n_override.stat.exists
+    - n8n_override.stat.isreg | default(false)
+    - not (n8n_override.stat.islnk | default(false))
+
+- name: Refuse an unrelated existing file
+  ansible.builtin.assert:
+    that:
+      - not n8n_override.stat.exists or (n8n_override.stat.isreg | default(false) and not (n8n_override.stat.islnk | default(false)) and (n8n_override_contents.content | default('') | b64decode).startswith('# Managed by HomeLab Ansible; n8n image override only.\n'))
+  no_log: true
+
+- name: Write the n8n image-only override
+  ansible.builtin.template:
+    src: image-override.yml.j2
+    dest: '{{ home_lab_project_src }}/.home-lab-ansible-n8n.yml'
+    mode: '0600'
+  no_log: true
+
+- name: Verify the original effective config and image-only difference
+  ansible.builtin.script:
+    cmd: 'prepare_n8n_compose.py {{ home_lab_project_src | quote }} verify'
+    executable: python3
+  environment:
+    N8N_BASELINE: '{{ n8n_baseline.stdout }}'
+  register: n8n_verified
+  changed_when: false
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Apply only n8n, retaining the existing volume and other services
+  community.docker.docker_compose_v2:
+    project_src: '{{ home_lab_project_src }}'
+    project_name: n8n
+    files: '{{ (n8n_verified.stdout | from_json).files }}'
+    services: [n8n]
+    state: present
+    dependencies: false
+    build: never
+    pull: missing
+    recreate: auto
+    remove_orphans: false
+    renew_anon_volumes: false
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Wait for n8n health
+  ansible.builtin.uri:
+    url: http://127.0.0.1:5678/healthz
+    status_code: 200
+    timeout: 5
+    use_proxy: false
+  register: n8n_health
+  retries: 24
+  delay: 5
+  until: n8n_health.status | default(0) == 200
+  changed_when: false
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Verify the running n8n version
+  ansible.builtin.command:
+    argv: [docker, exec, n8n, n8n, --version]
+  register: n8n_version
+  changed_when: false
+  no_log: true
+  when: not ansible_check_mode
+
+- name: Require the requested running version
+  ansible.builtin.assert:
+    that:
+      - n8n_version.stdout | trim == '2.44.7'
+    fail_msg: n8n responded but the requested version was not confirmed.
+  when: not ansible_check_mode
