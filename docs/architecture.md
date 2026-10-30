@@ -3,6 +3,9 @@
 English first, Japanese below each section. Reflects the deployed state on 2026-10-15; section 2b adds the OSS playground (partly deployed).
 各節は英語が先、日本語が後です。2026-10-15 時点の実機の状態を反映しています。
 
+> **Status note:** This document records the 2026-10-15 state and remains the detailed reference for network layout, data flows and backup flow. The current overview diagram (recorded 2026-10-29, including the security-analysis guest and the github-history adapter) lives in the [README](../README.md#architecture).
+> **位置づけ:** 本書は 2026-10-15 時点の記録で、ネットワーク・データの流れ・バックアップの詳細リファレンスです。現在の全体図（2026-10-29 記録、セキュリティ解析ゲストと github-history を含む）は [README](../README.md#architecture) にあります。
+
 ## 1. Roles / 役割分担
 
 | EN | JA |

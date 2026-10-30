@@ -12,6 +12,7 @@ The diagram shows the recorded configuration and observed running services as of
 flowchart LR
   PC["Workstation<br/>browser and SSH"]
   GH["GitHub API"]
+  TS["Tailscale<br/>tailnet access"]
   subgraph HOST["Intel NUC · Ubuntu Server"]
     direction TB
     subgraph DOCKER["Docker Compose services"]
@@ -25,6 +26,7 @@ flowchart LR
       GRAF["Grafana<br/>dashboards"]
       DATA[("Reports and snapshots")]
       WEB["Open WebUI<br/>stopped; data retained"]
+      ADG["AdGuard Home<br/>DNS filtering · trial"]
     end
     subgraph VM["Separate QEMU/KVM guest · no virtual NIC"]
       WB["OSS Vulnerability Workbench MCP<br/>dependency and static-analysis tools"]
@@ -33,7 +35,8 @@ flowchart LR
     CONSOLE["Host serial console<br/>UNIX socket"]
     ISO["Read-only ISO<br/>offline input transfer"]
   end
-  PC -->|"SSH and tunnels to local UIs"| HOST
+  PC -->|"Tailscale"| TS
+  TS -->|"SSH and tunnels to local UIs"| HOST
   N8N -->|"invoke"| JOBS
   JOBS -->|"read"| GH
   JOBS -->|"write"| DATA
@@ -45,7 +48,23 @@ flowchart LR
   KUMA -.->|"health checks"| MCP
   CONSOLE -->|"console access"| VM
   ISO -->|"offline transfer"| VM
+
+  classDef user fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef svc fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef ext fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+  classDef store fill:#fef9c3,stroke:#ca8a04,color:#713f12
+  classDef stopped fill:#f1f5f9,stroke:#94a3b8,color:#475569
+  classDef trial fill:#fffbeb,stroke:#d97706,color:#92400e,stroke-dasharray:5 5
+  class PC user
+  class GH,TS ext
+  class N8N,JOBS,MCP,HIST,KUMA,NODE,PROM,GRAF,WB,REA svc
+  class DATA store
+  class WEB stopped
+  class ADG trial
+  style HOST fill:#fff7ed,stroke:#ea580c,color:#7c2d12
 ```
+
+Larger view: [full-size PNG](assets/architecture.png)
 
 Prometheus pulls metrics from node_exporter. The history adapter runs, but its dashboard integration is not verified. Workbench and REA are separate tools; their integration is not implemented. The VM has no virtual NIC, so the diagram does not assume SSH to the guest. See [VM details](docs/security-analysis-vm.md) and [architecture notes](docs/architecture.md); older diagrams may reflect earlier stages.
 
@@ -73,6 +92,19 @@ The custom job and MCP source differs from the public snapshot in some files. Do
 - Explore metrics and service checks in the [playground](docs/playground.md) and [monitoring guide](docs/monitoring-notifications.md).
 - Review [backup and restore](docs/backup-restore.md): local encrypted backup and restore were tested, but an off-device copy is still missing, and observability volumes are outside the existing backup.
 - Find setup, source and historical records in the [documentation index](docs/README.md), [`stacks/`](stacks/), [`scripts/`](scripts/) and [`tests/`](tests/).
+
+## Repository map
+
+| Path | What is there |
+|---|---|
+| `docs/` | Guides, runbooks and design records. Start from the [documentation index](docs/README.md). |
+| `stacks/` | Docker Compose definitions: `observability/`, `n8n/`, `mcp/`, `uptime-kuma/`, `open-webui/`, `network-dns/`, `kubernetes/`, `openclaw-smoke/`. |
+| `scripts/` | Operations, backup and collection scripts run on the host. |
+| `ansible/` | Read-only baseline and service apply playbooks (applied changes and unplaced candidates are mixed; see its README). |
+| `tests/` | Verification tests for the scripts and collectors. |
+| `schemas/` | JSON schema for security-analysis events. |
+| `experiments/` | Trial code, kept apart from the running services. |
+| `assets/` | Full-size diagram images linked from the READMEs. |
 
 ## Future direction
 

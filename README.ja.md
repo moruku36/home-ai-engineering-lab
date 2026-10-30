@@ -12,6 +12,7 @@ GitHub の作業を自動化し、監視基盤やインフラ、セキュリテ�
 flowchart LR
   PC["手元のPC<br/>ブラウザ・SSH"]
   GH["GitHub API"]
+  TS["Tailscale<br/>tailnet アクセス"]
   subgraph HOST["Intel NUC · Ubuntu Server"]
     direction TB
     subgraph DOCKER["Docker Compose サービス"]
@@ -25,6 +26,7 @@ flowchart LR
       GRAF["Grafana<br/>ダッシュボード"]
       DATA[("レポート・スナップショット")]
       WEB["Open WebUI<br/>停止中・データ保持"]
+      ADG["AdGuard Home<br/>DNSフィルタ・試験中"]
     end
     subgraph VM["独立した QEMU/KVM ゲスト · 仮想NICなし"]
       WB["OSS Vulnerability Workbench MCP<br/>依存関係・静的解析ツール"]
@@ -33,7 +35,8 @@ flowchart LR
     CONSOLE["ホストのシリアルコンソール<br/>UNIXソケット"]
     ISO["読み取り専用ISO<br/>オフラインで資材を搬入"]
   end
-  PC -->|"SSH・管理画面へのトンネル"| HOST
+  PC -->|"Tailscale"| TS
+  TS -->|"SSH・管理画面へのトンネル"| HOST
   N8N -->|"呼び出し"| JOBS
   JOBS -->|"読み取り"| GH
   JOBS -->|"保存"| DATA
@@ -45,7 +48,23 @@ flowchart LR
   KUMA -.->|"死活確認"| MCP
   CONSOLE -->|"コンソール操作"| VM
   ISO -->|"オフライン搬入"| VM
+
+  classDef user fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
+  classDef svc fill:#dcfce7,stroke:#16a34a,color:#14532d
+  classDef ext fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
+  classDef store fill:#fef9c3,stroke:#ca8a04,color:#713f12
+  classDef stopped fill:#f1f5f9,stroke:#94a3b8,color:#475569
+  classDef trial fill:#fffbeb,stroke:#d97706,color:#92400e,stroke-dasharray:5 5
+  class PC user
+  class GH,TS ext
+  class N8N,JOBS,MCP,HIST,KUMA,NODE,PROM,GRAF,WB,REA svc
+  class DATA store
+  class WEB stopped
+  class ADG trial
+  style HOST fill:#fff7ed,stroke:#ea580c,color:#7c2d12
 ```
+
+大きく見る：[フルサイズPNG](assets/architecture.ja.png)
 
 Workbench と REA は独立したツールで、相互連携は未実装です。ゲストには仮想 NIC がないため、ゲストへの SSH 接続は図に含めていません。詳しくは [VM の記録](docs/security-analysis-vm.md) と [構成メモ](docs/architecture.md) を参照してください。古い図には以前の段階が残っています。
 
@@ -73,6 +92,19 @@ Workbench と REA は独立したツールで、相互連携は未実装です�
 - メトリクスと死活監視は [プレイグラウンド](docs/playground.md) と [監視・通知](docs/monitoring-notifications.md) を参照。
 - [バックアップ・復元](docs/backup-restore.md) はローカルの暗号化バックアップと復元を試験済み。別の機器へのコピーは未整備で、observability のボリュームは既存バックアップの対象外です。
 - 構築方法や過去の記録は [ドキュメント索引](docs/README.md) にあります。定義やスクリプトは [`stacks/`](stacks/)、[`scripts/`](scripts/)、試験は [`tests/`](tests/) にあります。
+
+## リポジトリの歩き方
+
+| パス | 内容 |
+|---|---|
+| `docs/` | ガイド・手順書・設計記録。[ドキュメント索引](docs/README.md) から辿れます。 |
+| `stacks/` | Docker Compose の定義群：`observability/`、`n8n/`、`mcp/`、`uptime-kuma/`、`open-webui/`、`network-dns/`、`kubernetes/`、`openclaw-smoke/`。 |
+| `scripts/` | ホストで動かす運用・バックアップ・収集スクリプト。 |
+| `ansible/` | 読み取り専用のベースラインとサービス適用プレイブック（適用済みと未配置の候補が混在。README 参照）。 |
+| `tests/` | スクリプトと収集処理の検証テスト。 |
+| `schemas/` | セキュリティ解析イベントの JSON スキーマ。 |
+| `experiments/` | 試行コード。稼働サービスとは分離しています。 |
+| `assets/` | README からリンクするフルサイズの構成図画像。 |
 
 ## 今後の展望
 
