@@ -108,6 +108,6 @@ The custom job and MCP source differs from the public snapshot in some files. Do
 
 ## Future direction
 
-Add a Mac mini as a possible on-premises AI research machine. This is a future idea: hardware, model runtime, connectivity and integration are not yet established. The existing NUC services and isolated security guest remain distinct from that proposed work. The pre-purchase [Mac mini local AI plan](docs/mac-mini-local-ai-plan.md) records the assumptions (M4, 16 GB, 256 GB); nothing is bought, installed or measured.
+The 2026-11-01 [post-Phase-4 OpenClaw operations design](docs/home-ai-lab-openclaw-operations.md) assigns operations of Ubuntu and the additional Mac mini to OpenClaw, with Dots responsible for construction and changes. It starts after the owner's Phase 4 and initial handover; actual hardware, connectivity, installation and acceptance remain unverified. The [pre-purchase Mac mini plan](docs/mac-mini-local-ai-plan.md) preserves the earlier M4, 16 GB and 256 GB assumptions, not a current inventory. Design approval does not authorize deployment, new communication or restarting paused jobs; the existing isolated security guest remains separate.
 
 License: not yet specified.
