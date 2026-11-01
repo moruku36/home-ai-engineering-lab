@@ -66,6 +66,7 @@ READMEは言語別ページです。詳細資料は各資料の既存の言語�
 |---|---|---|
 | [implementation-plan.md](implementation-plan.md) | JA | Runbook plus per-phase results (Phase 2–5 results appended at the end) / ランブックと各フェーズの結果 |
 | [physical-setup-guide.md](physical-setup-guide.md) | JA | Hardware and Ubuntu installation (done; kept for rebuilds). Example IPs there are placeholders / 物理セットアップ（完了済み・再構築用。IPは例） |
+| [mac-mini-kitting-record-2026-11.md](mac-mini-kitting-record-2026-11.md) | JA | Mac mini as-built kitting record: Phase 0–1 done, Phase 2–3 in progress, open items listed / Mac mini 実機のキッティング記録（Phase 0・1 完了、2・3 進行中、残項目明記） |
 
 ## Historical / 過去の資料
 
