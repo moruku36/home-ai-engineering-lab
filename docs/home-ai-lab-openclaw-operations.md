@@ -10,7 +10,7 @@ Home AI Lab means the existing Ubuntu machine and the additional Mac mini togeth
 
 This plan starts after the owner completes their Phase 4, initial construction and connectivity preparation. The current Phase 4 procedure and completion evidence were unavailable when this document was written. Confirm them at handover; do not infer completion. The historical [installation plan](implementation-plan.md) has a different “Phase 4: Open WebUI” and is not rewritten. Phases 5–9 below are local to this OpenClaw operations plan.
 
-The owner intends to prepare a route such as SSH inside Tailscale through which Dots can inspect the Mac mini. The route, authentication, permissions and actual connection remain unverified. Merging this design does not authorize new configuration, connection tests, persistent operation, communication or spending. Do not resume the four currently paused development/monitoring jobs without a separate instruction.
+The owner intends to prepare a route such as SSH inside Tailscale through which Dots can inspect the Mac mini. The route, authentication, permissions and actual connection remain unverified. Merging this design does not authorize new configuration, connection tests, persistent operation, communication or spending. Confirm existing stopped/deferred states at handover; adopting this plan is not a reason to resume them.
 
 ## 2. Roles and ownership boundaries
 
@@ -52,7 +52,7 @@ Record each stage as not started, under validation, accepted or on hold. Do not 
 
 | Stage | Scope | Evidence needed to advance |
 |---|---|---|
-| Phase 5: hardware acceptance and baseline | Reconcile Phase 4 evidence, specifications, approved access, inventory, backup coverage/restore records and paused jobs. Establish execution permissions first | Record normal criteria, owner, collection method, observation window and stop procedure per target; complete the owner/Dots handover |
+| Phase 5: hardware acceptance and baseline | Reconcile Phase 4 evidence, specifications, approved access, inventory, backup coverage/restore records and stopped/deferred states. Establish execution permissions first | Record normal criteria, owner, collection method, observation window and stop procedure per target; complete the owner/Dots handover |
 | Phase 6: read-only operations | Trial monitoring, bounded classification and evidence-backed reporting using approved data, starting with synthetic inputs. Dots is the initial counterpart | Distinguish normal operation, planned stops, persistent failures, missing data, false alarms and post-restart state; validate redaction, rejection of embedded instructions and stopping |
 | Phase 7: formal Dots integration acceptance | Through a separately approved transport, verify notification, acknowledgement, ownership transfer, maintenance mode and return to operation end to end | Handle non-delivery, duplicates, delay and counterpart absence; prevent competing operations on one target. Record and defer when Dots is unavailable |
 | Phase 8: limited aggregate reports to Muse | After lab operations and Dots integration are accepted, send only necessary state, impact and questions for the owner | Approve recipient, fields, frequency, retention, cost cap and stop method; verify exclusion of secrets, raw logs and personal-life information |
@@ -67,7 +67,7 @@ Collect the baseline from the machines rather than adopting an old README's runn
 | Area | Include in the baseline |
 |---|---|
 | Availability | Expected service responses, intentional stops, dependencies and gaps in monitoring itself |
-| Jobs | Expected cadence, completion deadline, last success, failure/deferred state. Do not return the four paused jobs to the running baseline |
+| Jobs | Expected cadence, completion deadline, last success, failure/deferred state. Do not return stopped/deferred jobs to the running baseline on the authority of this plan alone |
 | Resources | Normal CPU, memory, swap, free storage and queue ranges; conditions for reviewing those ranges |
 | Inference | Format/evidence validation, false positives/misses and response deadline. A valid structure does not establish correct content |
 | Notification and preservation | Delivery acknowledgement, duplicate suppression, backup scope, last success and restore verification; never treat unverified as successful |
@@ -97,7 +97,7 @@ At execution time, reconcile the current owner instruction with existing explici
 
 1. The latest Phase 4 procedure and evidence, actual specifications and OpenClaw installation state.
 2. Owner-prepared access, read scope, runtime account and credential custodian.
-3. Existing services and the identities of the four paused jobs; do not copy private identifiers into public documentation.
+3. Existing services and the identities of stopped/deferred jobs; do not copy private identifiers into public documentation.
 4. Dots transport, acknowledgement and storage while unavailable. Decide Muse integration separately later.
 5. Runtime, model, resource caps, observation period, notification deadline, retention and cost ceiling.
 6. Backup coverage/exclusions, restore evidence, stopping operations and returning ownership.
