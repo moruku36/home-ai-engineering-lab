@@ -4,6 +4,8 @@
 
 Status: **future plan before purchase. Nothing is bought, installed, downloaded or connected** (recorded 2026-10-30).
 
+This is a historical pre-purchase snapshot, not the current device inventory. For the 2026-11-01 role assignment and gated handover after the owner's Phase 4, see the [OpenClaw operations design](home-ai-lab-openclaw-operations.md). Verify actual hardware and installation state at handover; the newer design does not authorize execution.
+
 This is not a measurement. No model has run on this hardware, so no speed, memory or accuracy figure below is a result.
 
 ## 1. Purpose and non-goals
