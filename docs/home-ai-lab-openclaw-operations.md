@@ -103,3 +103,9 @@ At execution time, reconcile the current owner instruction with existing explici
 6. Backup coverage/exclusions, restore evidence, stopping operations and returning ownership.
 
 Related: [configuration status](configuration-status.md), [monitoring and notifications](monitoring-notifications.md), [backup and restore](backup-restore.md), [OpenClaw official site](https://openclaw.ai/).
+
+## 9. Development agent policy (added 2026-11-02)
+
+Development in this lab environment is centred on Claude Code (the CLI). Anthropic usage is API-based in principle, and a subscription sign-in is never routed through third-party tools. Antigravity is not used.
+
+Reason: Section 6 of Google's Antigravity Additional Terms treats access through third-party software as a breach of the agreement (it explicitly names using Antigravity OAuth with OpenClaw as an example), and in February 2026 a large number of paying users were suspended without warning. Enforcement applies at the account level and extends to Antigravity itself, its CLI, and Gemini CLI, and the details of how violations are determined are not disclosed. To avoid that risk, Antigravity is limited to use through the official client on the owner's own device and is not used in this lab environment, including OpenClaw.

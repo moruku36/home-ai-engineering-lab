@@ -103,3 +103,9 @@ Dotsは**初期のラボ内試験からの連携相手**とする。後述のPha
 6. ラボのバックアップ対象・除外・復元実績、操作停止と担当を戻す方法。
 
 関連：[構成状況](configuration-status.md)、[監視・通知](monitoring-notifications.md)、[バックアップ・復元](backup-restore.md)、[OpenClaw公式](https://openclaw.ai/)。
+
+## 9. 開発エージェントの方針（2026-11-02 追記）
+
+本ラボ環境の開発は Claude Code（CLI）を軸とする。Anthropic の利用は API を基本とし、サブスクリプションのログインを第三者ツール経由で使う形は取らない。Antigravity は使用しない。
+
+理由：Google の Antigravity 追加規約 §6 は、第三者ソフトウェア経由のアクセス（例として OpenClaw での Antigravity OAuth 利用を明記）を契約違反としており、2026年2月には有料ユーザー多数が無警告で利用停止になった事例がある。執行はアカウント単位で Antigravity 本体・CLI・Gemini CLI に波及し、判定の詳細は開示されない。リスク回避のため、Antigravity は本人の端末で公式クライアントを使う形に限定し、OpenClaw を含む本ラボ環境では使用しない。
