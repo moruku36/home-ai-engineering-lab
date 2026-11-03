@@ -243,3 +243,27 @@ Source: `collect_activity`, `activity_lines` in `stacks/n8n/python-jobs/github_s
 - *Private repositories:* the existing optional read-only token (Metadata, Contents, Pull requests *(verify exact names)*); nothing new is requested here.
 
 **JA:** 日報の第8節として、前日JST（`[前日00:00, 当日00:00)` の半開区間）のPR作成数・マージ数・マージせずclose数、Issue作成/close数、「最新pushが窓内にあるリポジトリ数」を出します。Search APIのみで新しい権限・トークンは不要です。トークンなしの上限45回ではActionsと最終コミットだけで予算を使い切り得るため、`ACTIVITY_RESERVE_CALLS`（既定6）を先に確保して本節を優先し、代わりに各リポジトリのチェックが減ります（Coverageに「N calls are held back for section 8」と出ます）。予算不足のときは「≥N」か「not collected」と理由を出します（`GITHUB_ACTIVITY=0` で無効）。マージ数は `merged_at` が窓内のものだけで、単なるcloseは数えません。取得できない指標は「not collected（理由）」で、0にはしません。1000件超・`incomplete_results` の場合は「≥N」です。リポジトリ数は **push回数でもコミット数でもありません**（後続のpushで時刻が上書きされるため下限）。pushイベント数とコミット数は未実装で、正確に数えるにはpush webhook（受信口・秘密・配信ID永続化）やブランチ/日付の定義が必要です。保証できるのは「取得時点で検索結果を全件走査した」ことまでで、GitHubの検索索引の反映遅延は未検証のため、数値は**その日の最終確定値ではありません**（レポートに取得時刻と留保を表示し、Coverageは「complete」ではなく「read in full」と表記）。閲覧は従来どおりMCPの `read_report` で `github-daily-latest.md` の第8節を読みます。
+
+## 15. Follow-up: GitHub-side daily totals across environments / 今後の改修: 全実行環境のGitHub日別集計
+
+**Status (2026-11-04 JST): recorded requirement, not implemented or deployed. / 状態: 改修要望の記録のみ。未実装・未適用。**
+
+**EN:** The daily Grafana view should show GitHub-side activity totals across Windows, cloud agents and HomeLab, regardless of which environment or actor performed the update. Prioritize push-event counts and merged-PR counts; retain issues opened/closed and other PR activity as separate metrics. Do not substitute commit counts. The committed collector already queries GitHub, so Windows-only collection is a hypothesis, not a verified cause. The live collector, retained snapshots, history adapter and panel must first be traced end to end. See the Japanese work items below and §§13–14 for existing limits.
+
+**確認できたこと（保存ソースのみ）**
+- [collector](../stacks/n8n/python-jobs/github_snapshot.py) の `collect_activity` はGitHub Search APIから前日JSTのIssue作成/close・PR作成/マージ/未マージcloseを取得する。Windowsのローカル操作ログを集計する実装ではない。
+- [統合ダッシュボード案](../stacks/observability/proposals/home-lab-unified.json) の「GitHub 日別実績（保存済み集計対象日）」は、[履歴アダプター](../scripts/github_history.py) が保存済みsnapshotから返す上記5系列を表示する。push回数・コミット数の系列はない。`latest_push_repositories` は別の[メトリクス変換](../scripts/github_snapshot_metrics.py)で扱うリポジトリ数の下限であり、push回数ではない。
+- 稼働中のcollector・保存データ・Grafana設定がこのソースと一致するかは未確認。「Windowsからの更新だけを数えている」とはまだ断定しない。
+
+**改修すること**
+1. **全環境を合算する。** Windows・クラウド・HomeLabのどこから更新しても、GitHubに到達した対象リポジトリの活動を日別に集計する。特定PCのログや特定actorのユーザーイベントだけに依存しない。対象リポジトリ集合、非公開・forkの扱い、対象外理由を明示する（現行日次集計は自所有・非fork、認証なしでは公開のみ）。
+2. **指標を分ける。** **最優先はpushイベント数とPRマージ数。** Issue作成/close、PR作成/未マージcloseも別系列を保つ。PRマージは対象日の `merged_at` と `repo#number` で数え、単なるcloseやmerge commit数で代用しない。コミット数はpush回数の代用にしない。pushのbranch/tag作成・削除・force pushを含める範囲と、Issue closeを対象Issue数とするかclose遷移回数とするかを実装前に定義する。再open・同日再closeを現在の `closed_at` だけで完全に復元できるとは扱わない。
+3. **GitHub側の収集を毎日保存する。** 既存の07:00 JST収集は前日Dの `[D 00:00 JST, D+1 00:00 JST)` を対象とする。GitHubの発生時刻で日付を決め、収集時刻と分離する。検索反映遅延を考慮した過去日の再取得・補正を設計し、同日再実行は置換、イベントID等で重複排除する。
+4. **pushの完全性を偽らない。** Events APIは最大300件・過去30日・最大6時間の遅延があるため、1日1回取得するだけで総量が保証されるとはしない。まず対象リポジトリごとの取りこぼし条件を確認し、不完全なら「少なくともN」または未取得と表示する。完全性を求める場合はGitHub webhook等の永続収集を別途設計し、重複配信・欠落検知・再配信・対象追加を扱う。webhookにも非生成・非配信条件があり、導入だけで完全とは呼ばない。
+5. **収集から画面までつなぐ。** 稼働collector → 日付別snapshot → history adapter → Grafanaの各段で対象日・範囲・値・取得状態を照合する。push系列追加に必要な保存形式・adapter・panelを一緒に改修する。欠損や権限不足は0にせずnull/未取得と理由を残し、日次値をscrape回数で累積しない。
+
+**受入れ条件:** 合成データで3環境由来の更新が同じJST日に合算され、別actorも対象範囲内なら欠落しないこと。JST境界、重複・再実行、検索遅延、API上限・途中失敗、同日Issue開閉/再open、pushとcommitの違い、PRマージと未マージcloseの区別を確認する。実機ではGitHub側の根拠と保存値・Grafana表示を照合してから完了とする。
+
+**今回の範囲:** 文書への記録のみ。収集ジョブ実行、稼働サービス・ダッシュボード変更、新しい認証・権限・webhook受信口の設定は行わない。
+
+公式資料（2026-11-04 JST確認）: [Events API](https://docs.github.com/en/rest/activity/events)、[push webhookと配信上限](https://docs.github.com/en/webhooks/webhook-events-and-payloads#push)。
