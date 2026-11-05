@@ -8,6 +8,8 @@ English first, Japanese second. "Language" tells you what the document is writte
 README pages are separate; topic guides retain their existing languages.
 READMEは言語別ページです。詳細資料は各資料の既存の言語で記載しています。
 
+Latest Mac mini integration status / Mac mini 連携の最新状態：[2026-11-06 OpenClaw／クロッチ導入・検証記録](openclaw-status-2026-11-06.ja.md)（JA）。Limited checks passed; full operations acceptance and automatic three-party exchange remain incomplete. / 限定試験まで確認。正式な運用受入れと三者自動往復は未完了。
+
 ## Start here / まずここから
 
 | Doc | Language | About / 内容 |
