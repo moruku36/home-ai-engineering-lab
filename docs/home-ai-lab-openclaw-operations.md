@@ -1,5 +1,7 @@
 # Home AI Lab: OpenClaw operations after Phase 4
 
+**2026-11-06 update:** This is the November 1 design record. See the [dated integration and verification record (Japanese)](openclaw-status-2026-11-06.ja.md) for later installation and limited checks. Earlier uninstalled/unverified statements are historical; formal operations acceptance remains incomplete.
+
 **English** | [日本語](home-ai-lab-openclaw-operations.ja.md)
 
 Recorded: 2026-11-01. Status: **design only; hardware acceptance, installation, connectivity and operation are unverified**.

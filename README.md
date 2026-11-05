@@ -2,7 +2,11 @@
 
 **English** | [日本語](README.ja.md)
 
-A home lab for GitHub automation, observability, and hands-on infrastructure and security experiments. An Intel NUC running Ubuntu Server hosts Docker Compose services and a separate QEMU/KVM security-analysis guest. The current automation platform does not run an LLM or use a paid LLM API.
+A home lab for GitHub automation, observability, and hands-on infrastructure and security experiments. An Intel NUC running Ubuntu Server hosts Docker Compose services and a separate QEMU/KVM security-analysis guest. The previously documented NUC automation platform does not run an LLM or use a paid LLM API; this statement does not describe the newer Mac mini integration.
+
+## Update: 2026-11-06
+
+OpenClaw (Kurotchi) on the Mac mini has reached installation and limited verification. The [dated integration record (Japanese)](docs/openclaw-status-2026-11-06.ja.md) distinguishes Docker browser checks, CLI login, and lounge execution/receipt from unproven agent isolation, CLI agent use, and incomplete automatic three-party exchange. The architecture and NUC observations below retain their earlier observation dates.
 
 ## Architecture
 
@@ -108,6 +112,6 @@ The custom job and MCP source differs from the public snapshot in some files. Do
 
 ## Future direction
 
-The 2026-11-01 [post-Phase-4 OpenClaw operations design](docs/home-ai-lab-openclaw-operations.md) assigns operations of Ubuntu and the additional Mac mini to OpenClaw, with Dots responsible for construction and changes. It starts after the owner's Phase 4 and initial handover; actual hardware, connectivity, installation and acceptance remain unverified. The [pre-purchase Mac mini plan](docs/mac-mini-local-ai-plan.md) preserves the earlier M4, 16 GB and 256 GB assumptions, not a current inventory. Design approval does not authorize deployment, new communication or restarting paused jobs; the existing isolated security guest remains separate.
+The 2026-11-01 [post-Phase-4 OpenClaw operations design](docs/home-ai-lab-openclaw-operations.md) assigns operations of Ubuntu and the additional Mac mini to OpenClaw, with Dots responsible for construction and changes. It starts after the owner's Phase 4 and initial handover; that historical design did not verify hardware, connectivity, installation or acceptance. For subsequent installation and limited test results, use the dated record above; formal operations acceptance is still incomplete. The [pre-purchase Mac mini plan](docs/mac-mini-local-ai-plan.md) preserves the earlier M4, 16 GB and 256 GB assumptions, not a current inventory. Design approval does not authorize deployment, new communication or restarting paused jobs; the existing isolated security guest remains separate.
 
 License: not yet specified.

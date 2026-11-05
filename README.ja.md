@@ -2,7 +2,11 @@
 
 [English](README.md) | **日本語**
 
-GitHub の作業を自動化し、監視基盤やインフラ、セキュリティ解析を試すためのホームラボです。Intel NUC 上の Ubuntu Server で Docker Compose のサービスを動かし、別の QEMU/KVM ゲストにオフラインの解析環境を設けています。現在の自動化基盤では LLM や有料 LLM API を使っていません。
+GitHub の作業を自動化し、監視基盤やインフラ、セキュリティ解析を試すためのホームラボです。Intel NUC 上の Ubuntu Server で Docker Compose のサービスを動かし、別の QEMU/KVM ゲストにオフラインの解析環境を設けています。従来記録の NUC 自動化基盤では LLM や有料 LLM API を使っていません。この記述は新しい Mac mini の連携全体を指すものではありません。
+
+## 2026-11-06 の更新
+
+Mac mini 上の OpenClaw／クロッチは導入・限定試験まで進みました。[導入の工夫・検証結果・未完了事項](docs/openclaw-status-2026-11-06.ja.md) に、Docker ブラウザ、開発用 CLI、ラウンジの確認範囲を記録しています。三者自動往復と正式な運用受入れは未完了です。以下の構成図・NUC の観測結果は従来の基準日の記録です。
 
 ## 構成図
 
@@ -108,6 +112,6 @@ Workbench と REA は独立したツールで、相互連携は未実装です�
 
 ## 今後の展望
 
-2026-11-01の [Phase 4後のOpenClaw運用設計](docs/home-ai-lab-openclaw-operations.ja.md) では、Ubuntuと追加するMac miniの運用をOpenClaw、構築・改修をドッチーが担当します。本人のPhase 4と初期引継ぎが開始条件であり、実機仕様・接続・導入・受入れは未確認です。[購入前のMac mini計画](docs/mac-mini-local-ai-plan.ja.md) はM4・16 GB・256 GBという当時の想定を残した資料で、現在の実機台帳ではありません。設計の承認は導入・新規通信・停止中ジョブの再開許可ではなく、既存の隔離したセキュリティゲストも分離を維持します。
+2026-11-01の [Phase 4後のOpenClaw運用設計](docs/home-ai-lab-openclaw-operations.ja.md) では、Ubuntuと追加するMac miniの運用をOpenClaw、構築・改修をドッチーが担当します。本人のPhase 4と初期引継ぎを開始条件とした当時の設計です。その後の導入・限定試験は上記11月6日の記録を参照してください。正式な運用受入れは未完了です。[購入前のMac mini計画](docs/mac-mini-local-ai-plan.ja.md) はM4・16 GB・256 GBという当時の想定を残した資料で、現在の実機台帳ではありません。設計の承認は導入・新規通信・停止中ジョブの再開許可ではなく、既存の隔離したセキュリティゲストも分離を維持します。
 
 ライセンス：未指定。
