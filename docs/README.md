@@ -8,7 +8,9 @@ English first, Japanese second. "Language" tells you what the document is writte
 README pages are separate; topic guides retain their existing languages.
 READMEは言語別ページです。詳細資料は各資料の既存の言語で記載しています。
 
-Latest Mac mini integration status / Mac mini 連携の最新状態：[2026-11-06 OpenClaw／クロッチ導入・検証記録](openclaw-status-2026-11-06.ja.md)（JA）。Limited checks passed; full operations acceptance and automatic three-party exchange remain incomplete. / 限定試験まで確認。正式な運用受入れと三者自動往復は未完了。
+Latest construction report / 最新の構築レポート：[2026-11-08 ホームラボとクロッチの構築レポート](home-lab-kurotchi-build-report-2026-11-08.ja.md)（JA）。NUC lessons, CLI generation, GitHub test results, lounge reception, and unresolved approval registration. / NUC の構築経験、CLI 生成、GitHub 専用試験、ラウンジ受信と未解決の承認登録問題。Full operations acceptance remains incomplete. / 正式な運用受入れは未完了。
+
+Earlier integration record / 以前の連携記録：[2026-11-06 OpenClaw／クロッチ導入・検証記録](openclaw-status-2026-11-06.ja.md)（JA）。
 
 ## Start here / まずここから
 
