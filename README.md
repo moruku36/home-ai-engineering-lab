@@ -2,7 +2,7 @@
 
 **English** | [日本語](README.ja.md)
 
-A home lab for GitHub automation, observability, and hands-on infrastructure and security experiments. An Intel NUC running Ubuntu Server hosts Docker Compose services and a separate QEMU/KVM security-analysis guest. The previously documented NUC automation platform does not run an LLM or use a paid LLM API; this statement does not describe the newer Mac mini integration.
+A home lab for GitHub automation, observability, and hands-on infrastructure and security experiments. An Intel NUC running Ubuntu Server hosts Docker Compose services and a separate QEMU/KVM security-analysis guest. The additional Mac mini hosts OpenClaw (Kurotchi) and limited development-CLI/browser integration checks. The previously documented NUC automation platform does not run an LLM or use a paid LLM API; this statement does not describe the newer Mac mini integration.
 
 ## Update: 2026-11-09
 
@@ -10,71 +10,23 @@ Kurotchi's [latest improvement record (Japanese)](docs/kurotchi-improvements-202
 
 ## Update: 2026-11-06
 
-OpenClaw (Kurotchi) on the Mac mini has reached installation and limited verification. The [dated integration record (Japanese)](docs/openclaw-status-2026-11-06.ja.md) distinguishes Docker browser checks, CLI login, and lounge execution/receipt from unproven agent isolation, CLI agent use, and incomplete automatic three-party exchange. The architecture and NUC observations below retain their earlier observation dates.
+OpenClaw (Kurotchi) on the Mac mini has reached installation and limited verification. The [dated integration record (Japanese)](docs/openclaw-status-2026-11-06.ja.md) distinguishes Docker browser checks, CLI login, and lounge execution/receipt from unproven agent isolation, CLI agent use, and incomplete automatic three-party exchange. This paragraph records the November 6 state. The overview below was separately updated on November 9, while NUC observations retain their earlier dates.
 
 ## Architecture
 
-The diagram shows the recorded configuration and observed running services as of 2026-10-29. A running container does not prove every workflow or integration works. The guest console socket exists; the guest's current running state and tool versions have not been rechecked.
+Updated on 2026-11-09 to show Intel NUC and Mac mini as two separate hosts. The NUC view uses configuration observations through October 29; the Mac mini view uses installation and limited checks from November 6–9.
 
-```mermaid
-flowchart LR
-  PC["Workstation<br/>browser and SSH"]
-  GH["GitHub API"]
-  TS["Tailscale<br/>tailnet access"]
-  subgraph HOST["Intel NUC · Ubuntu Server"]
-    direction TB
-    subgraph DOCKER["Docker Compose services"]
-      N8N["n8n<br/>workflow automation"]
-      JOBS["python-jobs<br/>GitHub collection"]
-      MCP["mcp-server<br/>read-only report access"]
-      HIST["github-history<br/>saved-history adapter"]
-      KUMA["Uptime Kuma<br/>service checks"]
-      NODE["node_exporter<br/>host metrics"]
-      PROM["Prometheus<br/>metrics collection"]
-      GRAF["Grafana<br/>dashboards"]
-      DATA[("Reports and snapshots")]
-      WEB["Open WebUI<br/>stopped; data retained"]
-      ADG["AdGuard Home<br/>DNS filtering · trial"]
-    end
-    subgraph VM["Separate QEMU/KVM guest · no virtual NIC"]
-      WB["OSS Vulnerability Workbench MCP<br/>dependency and static-analysis tools"]
-      REA["REA + Ghidra<br/>binary analysis trial"]
-    end
-    CONSOLE["Host serial console<br/>UNIX socket"]
-    ISO["Read-only ISO<br/>offline input transfer"]
-  end
-  PC -->|"Tailscale"| TS
-  TS -->|"SSH and tunnels to local UIs"| HOST
-  N8N -->|"invoke"| JOBS
-  JOBS -->|"read"| GH
-  JOBS -->|"write"| DATA
-  N8N -->|"read via MCP"| MCP
-  MCP -->|"read-only"| DATA
-  PROM -->|"scrape"| NODE
-  GRAF -->|"query"| PROM
-  KUMA -.->|"health checks"| N8N
-  KUMA -.->|"health checks"| MCP
-  CONSOLE -->|"console access"| VM
-  ISO -->|"offline transfer"| VM
+![Intel NUC automation, monitoring and isolated analysis VM alongside Mac mini OpenClaw, development CLIs and Docker browser, with verified GitHub and lounge paths](assets/architecture.png)
 
-  classDef user fill:#dbeafe,stroke:#2563eb,color:#1e3a8a
-  classDef svc fill:#dcfce7,stroke:#16a34a,color:#14532d
-  classDef ext fill:#ede9fe,stroke:#7c3aed,color:#4c1d95
-  classDef store fill:#fef9c3,stroke:#ca8a04,color:#713f12
-  classDef stopped fill:#f1f5f9,stroke:#94a3b8,color:#475569
-  classDef trial fill:#fffbeb,stroke:#d97706,color:#92400e,stroke-dasharray:5 5
-  class PC user
-  class GH,TS ext
-  class N8N,JOBS,MCP,HIST,KUMA,NODE,PROM,GRAF,WB,REA svc
-  class DATA store
-  class WEB stopped
-  class ADG trial
-  style HOST fill:#fff7ed,stroke:#ea580c,color:#7c2d12
-```
+Larger view: [PNG](assets/architecture.png) · [scalable, editable SVG](assets/architecture.svg)
 
-Larger view: [full-size PNG](assets/architecture.png)
+- **NUC:** Collection and automation, monitoring and dashboards, and an isolated analysis VM with no virtual NIC.
+- **Mac mini:** OpenClaw (Kurotchi), Codex/Claude Code CLIs, and a dedicated Docker browser. Limited CLI generation and a public-page browser check were verified.
+- **External integration:** Bounded GitHub branch push/CI and lounge reception/scheduled-post paths were verified. Natural-language status sharing and merge approval remain under verification.
 
-Prometheus pulls metrics from node_exporter. The history adapter runs, but its dashboard integration is not verified. Workbench and REA are separate tools; their integration is not implemented. The VM has no virtual NIC, so the diagram does not assume SSH to the guest. See [VM details](docs/security-analysis-vm.md) and [architecture notes](docs/architecture.md); older diagrams may reflect earlier stages.
+Mac mini → NUC monitoring and recovery are not drawn as working connections: formal operations acceptance remains pending. Workstation SSH access and tunnels to administration UIs are omitted for readability; see the [operations runbook](docs/ops-runbook.md) and [Mac mini initial setup record](docs/mac-mini-kitting-record-2026-11.md).
+
+The overview also omits NUC Open WebUI, previously stopped with data retained, and the AdGuard Home trial. Workbench and REA integration is not implemented. Container startup and bounded checks do not establish all-feature acceptance or long-term operation. [VM details](docs/security-analysis-vm.md) and [historical architecture notes](docs/architecture.md) retain their own observation dates.
 
 ## Components
 
@@ -89,6 +41,10 @@ Prometheus pulls metrics from node_exporter. The history adapter runs, but its d
 | Compose | Uptime Kuma 2.5.6 | Checks service availability. Notification delivery and collector push setup remain unverified or unconfigured. |
 | Compose | Open WebUI | Chat interface, intentionally stopped with data retained. |
 | KVM guest | Workbench MCP; REA and Ghidra | Offline security-analysis experiments. Basic VM operation was conditionally accepted; REA-to-Ghidra analysis capability remains unaccepted. Current versions were not rechecked. |
+| Mac mini | OpenClaw (Kurotchi) | Installed with limited work integration verified. Full lab operations acceptance remains incomplete. |
+| Mac mini | Codex CLI, Claude Code CLI | Launch and limited generation verified; arbitrary development-task completion is not established. |
+| Mac mini | Dedicated Docker browser | Limited public-page check verified. Arbitrary sites and authentication-state separation remain unaccepted. |
+| External integration | Lounge, Dots, Muse | Reception, scheduled status posts and delivery to both peers verified. Natural-language sending and ongoing operation remain under verification. |
 
 The custom job and MCP source differs from the public snapshot in some files. Do not assume the running images match either source tree; verify and preserve local changes before updating. The monitoring aggregation and alert/probe candidates are not deployed. Ansible material includes both changes already applied and candidates not yet placed on the host.
 
@@ -116,6 +72,6 @@ The custom job and MCP source differs from the public snapshot in some files. Do
 
 ## Future direction
 
-The 2026-11-01 [post-Phase-4 OpenClaw operations design](docs/home-ai-lab-openclaw-operations.md) assigns operations of Ubuntu and the additional Mac mini to OpenClaw, with Dots responsible for construction and changes. It starts after the owner's Phase 4 and initial handover; that historical design did not verify hardware, connectivity, installation or acceptance. For subsequent installation and limited test results, use the dated record above; formal operations acceptance is still incomplete. The [pre-purchase Mac mini plan](docs/mac-mini-local-ai-plan.md) preserves the earlier M4, 16 GB and 256 GB assumptions, not a current inventory. Design approval does not authorize deployment, new communication or restarting paused jobs; the existing isolated security guest remains separate.
+The 2026-11-01 [post-Phase-4 OpenClaw operations design](docs/home-ai-lab-openclaw-operations.md) assigns operations of Ubuntu and the now-added Mac mini to OpenClaw, with Dots responsible for construction and changes. It starts after the owner's Phase 4 and initial handover; that historical design did not verify hardware, connectivity, installation or acceptance. For subsequent installation and limited test results, use the dated record above; formal operations acceptance is still incomplete. The [pre-purchase Mac mini plan](docs/mac-mini-local-ai-plan.md) preserves the earlier M4, 16 GB and 256 GB assumptions, not a current inventory. Design approval does not authorize deployment, new communication or restarting paused jobs; the existing isolated security guest remains separate.
 
 License: not yet specified.
