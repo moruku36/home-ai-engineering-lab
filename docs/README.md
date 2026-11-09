@@ -8,7 +8,9 @@ English first, Japanese second. "Language" tells you what the document is writte
 README pages are separate; topic guides retain their existing languages.
 READMEは言語別ページです。詳細資料は各資料の既存の言語で記載しています。
 
-Latest construction report / 最新の構築レポート：[2026-11-08 ホームラボとクロッチの構築レポート](home-lab-kurotchi-build-report-2026-11-08.ja.md)（JA）。NUC lessons, CLI generation, GitHub test results, lounge reception, and unresolved approval registration. / NUC の構築経験、CLI 生成、GitHub 専用試験、ラウンジ受信と未解決の承認登録問題。Full operations acceptance remains incomplete. / 正式な運用受入れは未完了。
+Latest improvement record / 最新の改善記録：[2026-11-09 クロッチの改善記録](kurotchi-improvements-2026-11-09.ja.md)（JA）。Verified branch push/CI and repaired lounge reception/scheduled delivery; merge approval and natural-language sharing remain under verification. / ブランチ push・CI とラウンジ受信・定期配送の修復を確認。マージ承認と自然文での状態共有は検証継続中。
+
+Construction report / 構築レポート：[2026-11-08 ホームラボとクロッチの構築レポート](home-lab-kurotchi-build-report-2026-11-08.ja.md)（JA）。NUC lessons, CLI generation, GitHub test results, lounge reception, and unresolved approval registration. / NUC の構築経験、CLI 生成、GitHub 専用試験、ラウンジ受信と未解決の承認登録問題。Full operations acceptance remains incomplete. / 正式な運用受入れは未完了。
 
 Earlier integration record / 以前の連携記録：[2026-11-06 OpenClaw／クロッチ導入・検証記録](openclaw-status-2026-11-06.ja.md)（JA）。
 

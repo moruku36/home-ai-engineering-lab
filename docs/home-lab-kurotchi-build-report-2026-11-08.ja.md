@@ -1,6 +1,8 @@
 # ホームラボとクロッチの構築レポート
 
 基準日：2026-11-08（JST）
+
+後続の進展：[11月9日のクロッチ改善記録](kurotchi-improvements-2026-11-09.ja.md)。以下は11月8日時点の構築記録として残す。
 対象：Intel NUC のホームラボ、Mac mini、OpenClaw（クロッチ）、開発用 CLI とラウンジ連携
 
 **English summary:** The lab progressed from a Compose-based automation and observability host to a second Mac mini host with OpenClaw, limited CLI generation, a dedicated GitHub test, and scheduled status exchange. The latest receive-side check confirmed that one message and its provenance were available in the normal conversation. General GitHub operations still encounter an approval-registration failure. Historical checks, recent observations and pending acceptance are distinguished below; this report does not certify current fleet health or fully autonomous operation.

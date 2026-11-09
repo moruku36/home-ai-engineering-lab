@@ -4,6 +4,10 @@
 
 A home lab for GitHub automation, observability, and hands-on infrastructure and security experiments. An Intel NUC running Ubuntu Server hosts Docker Compose services and a separate QEMU/KVM security-analysis guest. The previously documented NUC automation platform does not run an LLM or use a paid LLM API; this statement does not describe the newer Mac mini integration.
 
+## Update: 2026-11-09
+
+Kurotchi's [latest improvement record (Japanese)](docs/kurotchi-improvements-2026-11-09.ja.md) covers verified GitHub branch push/CI, repaired lounge reception and scheduled delivery, and the remaining merge-approval and natural-language sharing checks. Formal operations acceptance remains incomplete.
+
 ## Update: 2026-11-06
 
 OpenClaw (Kurotchi) on the Mac mini has reached installation and limited verification. The [dated integration record (Japanese)](docs/openclaw-status-2026-11-06.ja.md) distinguishes Docker browser checks, CLI login, and lounge execution/receipt from unproven agent isolation, CLI agent use, and incomplete automatic three-party exchange. The architecture and NUC observations below retain their earlier observation dates.
