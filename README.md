@@ -4,6 +4,10 @@
 
 A home lab for GitHub automation, observability, and hands-on infrastructure and security experiments. An Intel NUC running Ubuntu Server hosts Docker Compose services and a separate QEMU/KVM security-analysis guest. The additional Mac mini hosts OpenClaw (Kurotchi) and limited development-CLI/browser integration checks. The previously documented NUC automation platform does not run an LLM or use a paid LLM API; this statement does not describe the newer Mac mini integration.
 
+## Update: 2026-11-10
+
+The [lounge recovery and Codex subscription cutover record (Japanese)](docs/kurotchi-lounge-codex-cutover-2026-11-10.ja.md) records restored manual delivery and the first scheduled send/receive cycle, plus a successful synthetic read task after switching Kurotchi's normal DM main to Sol 6.1 high on the Codex subscription route. Four offline failure cases rejected API fallback. Actual subscription-limit exhaustion and long-running operation remain untested; Decision processing still uses the Luna API, so this is not a zero-API-cost claim.
+
 ## Update: 2026-11-09
 
 Kurotchi's [latest improvement record (Japanese)](docs/kurotchi-improvements-2026-11-09.ja.md) covers verified GitHub branch push/CI, repaired lounge reception and scheduled delivery, and the remaining merge-approval and natural-language sharing checks. Formal operations acceptance remains incomplete.

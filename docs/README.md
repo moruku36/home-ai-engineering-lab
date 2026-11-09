@@ -8,7 +8,9 @@ English first, Japanese second. "Language" tells you what the document is writte
 README pages are separate; topic guides retain their existing languages.
 READMEは言語別ページです。詳細資料は各資料の既存の言語で記載しています。
 
-Latest improvement record / 最新の改善記録：[2026-11-09 クロッチの改善記録](kurotchi-improvements-2026-11-09.ja.md)（JA）。Verified branch push/CI and repaired lounge reception/scheduled delivery; merge approval and natural-language sharing remain under verification. / ブランチ push・CI とラウンジ受信・定期配送の修復を確認。マージ承認と自然文での状態共有は検証継続中。
+Latest recovery and cutover record / 最新の復旧・切替記録：[2026-11-10 ラウンジ復旧と Codex サブスク切替](kurotchi-lounge-codex-cutover-2026-11-10.ja.md)（JA）。Manual delivery, the first scheduled send/receive cycle, and a synthetic read task on Sol 6.1 high via the subscription route were verified. Actual limit exhaustion remains untested; Decision Luna API usage remains. / 手動配送・初回定期送受信とサブスク経路での架空データ読取りを確認。実上限到達は未試験、Decision の Luna API は維持。
+
+Earlier improvement record / 以前の改善記録：[2026-11-09 クロッチの改善記録](kurotchi-improvements-2026-11-09.ja.md)（JA）。Verified branch push/CI and repaired lounge reception/scheduled delivery; merge approval and natural-language sharing remain under verification. / ブランチ push・CI とラウンジ受信・定期配送の修復を確認。マージ承認と自然文での状態共有は検証継続中。
 
 Construction report / 構築レポート：[2026-11-08 ホームラボとクロッチの構築レポート](home-lab-kurotchi-build-report-2026-11-08.ja.md)（JA）。NUC lessons, CLI generation, GitHub test results, lounge reception, and unresolved approval registration. / NUC の構築経験、CLI 生成、GitHub 専用試験、ラウンジ受信と未解決の承認登録問題。Full operations acceptance remains incomplete. / 正式な運用受入れは未完了。
 
