@@ -14,11 +14,11 @@ Kurotchi's [latest improvement record (Japanese)](docs/kurotchi-improvements-202
 
 ## Update: 2026-11-06
 
-OpenClaw (Kurotchi) on the Mac mini has reached installation and limited verification. The [dated integration record (Japanese)](docs/openclaw-status-2026-11-06.ja.md) distinguishes Docker browser checks, CLI login, and lounge execution/receipt from unproven agent isolation, CLI agent use, and incomplete automatic three-party exchange. This paragraph records the November 6 state. The overview below was separately updated on November 9, while NUC observations retain their earlier dates.
+OpenClaw (Kurotchi) on the Mac mini has reached installation and limited verification. The [dated integration record (Japanese)](docs/openclaw-status-2026-11-06.ja.md) distinguishes Docker browser checks, CLI login, and lounge execution/receipt from unproven agent isolation, CLI agent use, and incomplete automatic three-party exchange. This paragraph records the November 6 state. The overview below was separately updated on November 10, while NUC observations retain their earlier dates.
 
 ## Architecture
 
-Updated on 2026-11-09 to show Intel NUC and Mac mini as two separate hosts. The NUC view uses configuration observations through October 29; the Mac mini view uses installation and limited checks from November 6–9.
+Updated on 2026-11-10. The NUC view retains observations through October 29; the Mac mini view uses limited checks from November 6–10. The diagram now reflects the [November 10 cutover record](docs/kurotchi-lounge-codex-cutover-2026-11-10.ja.md): normal DM main on the Codex subscription route, retained Decision Luna API, and the first scheduled lounge send/receive cycle. No new live-host testing was performed for this update.
 
 ![Intel NUC automation, monitoring and isolated analysis VM alongside Mac mini OpenClaw, development CLIs and Docker browser, with verified GitHub and lounge paths](assets/architecture.png)
 
@@ -26,7 +26,7 @@ Larger view: [PNG](assets/architecture.png) · [scalable, editable SVG](assets/a
 
 - **NUC:** Collection and automation, monitoring and dashboards, and an isolated analysis VM with no virtual NIC.
 - **Mac mini:** OpenClaw (Kurotchi), Codex/Claude Code CLIs, and a dedicated Docker browser. Limited CLI generation and a public-page browser check were verified.
-- **External integration:** Bounded GitHub branch push/CI and lounge reception/scheduled-post paths were verified. Natural-language status sharing and merge approval remain under verification.
+- **External integration:** Bounded GitHub branch push/CI and lounge reception/scheduled-post paths were verified. Manual sharing of two approved completion summaries and the first scheduled send/receive cycle were checked. Arbitrary natural-language sharing, long-running operation and merge approval remain unaccepted.
 
 Mac mini → NUC monitoring and recovery are not drawn as working connections: formal operations acceptance remains pending. Workstation SSH access and tunnels to administration UIs are omitted for readability; see the [operations runbook](docs/ops-runbook.md) and [Mac mini initial setup record](docs/mac-mini-kitting-record-2026-11.md).
 
@@ -48,7 +48,7 @@ The overview also omits NUC Open WebUI, previously stopped with data retained, a
 | Mac mini | OpenClaw (Kurotchi) | Installed with limited work integration verified. Full lab operations acceptance remains incomplete. |
 | Mac mini | Codex CLI, Claude Code CLI | Launch and limited generation verified; arbitrary development-task completion is not established. |
 | Mac mini | Dedicated Docker browser | Limited public-page check verified. Arbitrary sites and authentication-state separation remain unaccepted. |
-| External integration | Lounge, Dots, Muse | Reception, scheduled status posts and delivery to both peers verified. Natural-language sending and ongoing operation remain under verification. |
+| External integration | Lounge, Dots, Muse | Reception, scheduled status posts and delivery to both peers verified. Manual sharing of approved summaries and the first scheduled send/receive cycle were checked; arbitrary natural-language sending and ongoing operation remain unaccepted. |
 
 The custom job and MCP source differs from the public snapshot in some files. Do not assume the running images match either source tree; verify and preserve local changes before updating. The monitoring aggregation and alert/probe candidates are not deployed. Ansible material includes both changes already applied and candidates not yet placed on the host.
 

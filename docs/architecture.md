@@ -3,8 +3,8 @@
 English first, Japanese below each section. Reflects the deployed state on 2026-10-15; section 2b adds the OSS playground (partly deployed).
 各節は英語が先、日本語が後です。2026-10-15 時点の実機の状態を反映しています。
 
-> **Status note:** This document records the 2026-10-15 state and remains the detailed reference for network layout, data flows and backup flow. The current two-host overview was updated on 2026-11-09 and includes the Mac mini/OpenClaw integration alongside the earlier NUC observations. See the [English README](../README.md#architecture) or [Japanese README](../README.ja.md#構成図).
-> **位置づけ:** 本書は 2026-10-15 時点の記録で、ネットワーク・データの流れ・バックアップの詳細リファレンスです。現在の2ホストの全体図は2026-11-09更新で、従来の NUC 観測に Mac mini／OpenClaw の連携を加えています。[日本語 README](../README.ja.md#構成図)・[英語 README](../README.md#architecture)を参照してください。
+> **Status note:** This document records the 2026-10-15 state and remains the detailed reference for network layout, data flows and backup flow. The current two-host overview was updated on 2026-11-10 and includes the Mac mini/OpenClaw integration alongside the earlier NUC observations. See the [English README](../README.md#architecture) or [Japanese README](../README.ja.md#構成図).
+> **位置づけ:** 本書は 2026-10-15 時点の記録で、ネットワーク・データの流れ・バックアップの詳細リファレンスです。現在の2ホストの全体図は2026-11-10更新で、従来の NUC 観測に Mac mini／OpenClaw の連携を加えています。[日本語 README](../README.ja.md#構成図)・[英語 README](../README.md#architecture)を参照してください。
 
 ## 1. Roles / 役割分担
 
