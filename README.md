@@ -2,37 +2,70 @@
 
 **English** | [日本語](README.ja.md)
 
-A home lab for GitHub automation, observability, and hands-on infrastructure and security experiments. An Intel NUC running Ubuntu Server hosts Docker Compose services and a separate QEMU/KVM security-analysis guest. The additional Mac mini hosts OpenClaw (Kurotchi) and limited development-CLI/browser integration checks. The previously documented NUC automation platform does not run an LLM or use a paid LLM API; this statement does not describe the newer Mac mini integration.
+A home lab for GitHub automation, observability, and infrastructure/security experiments. An **Intel NUC** runs the automation and monitoring stack; a **Mac mini** hosts OpenClaw (Kurotchi) and development-tool integration experiments.
 
-## Update: 2026-11-10
+[Architecture](#architecture) · [Status](#status) · [Guides](#guides) · [All documentation](docs/README.md)
 
-The [lounge recovery and Codex subscription cutover record (Japanese)](docs/kurotchi-lounge-codex-cutover-2026-11-10.ja.md) records restored manual delivery and the first scheduled send/receive cycle, plus a successful synthetic read task after switching Kurotchi's normal DM main to Sol 6.1 high on the Codex subscription route. Four offline failure cases rejected API fallback. Actual subscription-limit exhaustion and long-running operation remain untested; Decision processing still uses the Luna API, so this is not a zero-API-cost claim.
+## At a glance
 
-## Update: 2026-11-09
+| Area | Role |
+| --- | --- |
+| Intel NUC / Ubuntu Server | Docker Compose automation and monitoring, plus a separate offline QEMU/KVM analysis guest |
+| Mac mini / macOS | OpenClaw, Codex / Claude Code CLI, and a dedicated Docker browser |
+| External integrations | GitHub API / repositories / CI, and lounge status sharing with Dots and Muse |
 
-Kurotchi's [latest improvement record (Japanese)](docs/kurotchi-improvements-2026-11-09.ja.md) covers verified GitHub branch push/CI, repaired lounge reception and scheduled delivery, and the remaining merge-approval and natural-language sharing checks. Formal operations acceptance remains incomplete.
-
-## Update: 2026-11-06
-
-OpenClaw (Kurotchi) on the Mac mini has reached installation and limited verification. The [dated integration record (Japanese)](docs/openclaw-status-2026-11-06.ja.md) distinguishes Docker browser checks, CLI login, and lounge execution/receipt from unproven agent isolation, CLI agent use, and incomplete automatic three-party exchange. This paragraph records the November 6 state. The overview below was separately updated on November 10, while NUC observations retain their earlier dates.
+**Recorded state:** NUC observations through October 29; Mac mini checks from November 6–10, 2026. These are dated, limited results. Formal acceptance of full lab operations remains incomplete.
 
 ## Architecture
 
-Updated on 2026-11-10. The NUC view retains observations through October 29; the Mac mini view uses limited checks from November 6–10. The diagram now reflects the [November 10 cutover record](docs/kurotchi-lounge-codex-cutover-2026-11-10.ja.md): normal DM main on the Codex subscription route, retained Decision Luna API, and the first scheduled lounge send/receive cycle. No new live-host testing was performed for this update.
+```mermaid
+flowchart TB
+  subgraph LAB["Home lab"]
+    subgraph NUC["Intel NUC · Ubuntu Server"]
+      AUTO["GitHub automation<br/>n8n / python-jobs<br/>MCP / github-history"]
+      MON["Observability<br/>Prometheus / Grafana<br/>Uptime Kuma"]
+      VM["Offline KVM guest<br/>Workbench / REA / Ghidra<br/>No virtual NIC"]
+      AUTO ~~~ MON
+      MON ~~~ VM
+    end
+    subgraph MAC["Mac mini · macOS"]
+      OC["OpenClaw<br/>Kurotchi"]
+      CLI["Development CLIs<br/>Codex / Claude Code"]
+      BROWSER["Docker browser<br/>Public-page checks"]
+      OC ~~~ CLI
+      CLI ~~~ BROWSER
+    end
+  end
+  GH["GitHub<br/>API · repositories · CI"]
+  LOUNGE["Lounge"]
+  PEERS["Dots / Muse"]
+  AUTO -->|"API reads"| GH
+  OC -->|"Branch push / CI checked"| GH
+  OC <-->|"First scheduled send / receive checked"| LOUNGE
+  LOUNGE -->|"Delivery checked"| PEERS
+```
 
-![Intel NUC automation, monitoring and isolated analysis VM alongside Mac mini OpenClaw, development CLIs and Docker browser, with verified GitHub and lounge paths](assets/architecture.png)
+Arrows show integration paths checked within the recorded scope. They do not establish arbitrary-task completion, long-running operation, or automatic three-party conversation. **Mac mini → NUC monitoring/recovery is still awaiting acceptance** and has no connection in this diagram.
 
-Larger view: [PNG](assets/architecture.png) · [scalable, editable SVG](assets/architecture.svg)
+The normal DM route was checked with Sol 6.1 high via the Codex subscription. Decision still uses the Luna API. The older NUC automation stack uses no LLM or paid LLM API; this does not describe the whole Mac mini environment.
 
-- **NUC:** Collection and automation, monitoring and dashboards, and an isolated analysis VM with no virtual NIC.
-- **Mac mini:** OpenClaw (Kurotchi), Codex/Claude Code CLIs, and a dedicated Docker browser. Limited CLI generation and a public-page browser check were verified.
-- **External integration:** Bounded GitHub branch push/CI and lounge reception/scheduled-post paths were verified. Manual sharing of two approved completion summaries and the first scheduled send/receive cycle were checked. Arbitrary natural-language sharing, long-running operation and merge approval remain unaccepted.
+To update the overview, edit the Mermaid blocks here and in [README.ja.md](README.ja.md). GitHub renders them directly; no PNG/SVG regeneration is needed. Keep both diagrams aligned and change verification claims only when supported by a dated record. [Historical network/data-flow diagrams](docs/architecture.md) retain their own dates.
 
-Mac mini → NUC monitoring and recovery are not drawn as working connections: formal operations acceptance remains pending. Workstation SSH access and tunnels to administration UIs are omitted for readability; see the [operations runbook](docs/ops-runbook.md) and [Mac mini initial setup record](docs/mac-mini-kitting-record-2026-11.md).
+## Status
 
-The overview also omits NUC Open WebUI, previously stopped with data retained, and the AdGuard Home trial. Workbench and REA integration is not implemented. Container startup and bounded checks do not establish all-feature acceptance or long-term operation. [VM details](docs/security-analysis-vm.md) and [historical architecture notes](docs/architecture.md) retain their own observation dates.
+| Area | What was checked | Still open |
+| --- | --- | --- |
+| GitHub reporting | Manual collection and read-only MCP access from n8n | Scheduled execution; running image/source correspondence |
+| Observability | Prometheus readiness and three targets; Grafana database health via API | Browser dashboard display, notifications, collector push setup |
+| OpenClaw integration | Branch push/CI, approved-summary delivery, first scheduled lounge send/receive | Merge approval, arbitrary natural-language sharing, long-running operation |
+| Codex subscription route | Synthetic read task; four offline cases rejected API fallback | Real quota exhaustion, everyday-task quality, measured savings; Decision API remains |
+| Analysis VM | Basic VM operation conditionally accepted; no virtual NIC | REA → Ghidra analysis acceptance; Workbench/REA integration is not implemented |
+| Backup | Earlier local encrypted backup/restore tests | Off-device copy; observability-volume coverage; later update-specific restore checks |
 
-## Components
+See the [latest cutover record (JA)](docs/kurotchi-lounge-codex-cutover-2026-11-10.ja.md), [configuration observations](docs/configuration-status.md), and [backup/restore guide](docs/backup-restore.md) for the scope of each check.
+
+<details>
+<summary>Component versions and detailed boundaries</summary>
 
 | Location | Component | Purpose and current boundary |
 |---|---|---|
@@ -52,16 +85,35 @@ The overview also omits NUC Open WebUI, previously stopped with data retained, a
 
 The custom job and MCP source differs from the public snapshot in some files. Do not assume the running images match either source tree; verify and preserve local changes before updating. The monitoring aggregation and alert/probe candidates are not deployed. Ansible material includes both changes already applied and candidates not yet placed on the host.
 
-## Operate and explore
+Open WebUI remains intentionally stopped with data retained; the AdGuard Home trial is omitted from the overview. Container startup and bounded checks do not establish all-feature acceptance.
 
-- Read [configuration status](docs/configuration-status.md), the [monitoring proposal](docs/prometheus-alerts-candidate.md), and the [custom OSS update candidate](docs/custom-oss-update-candidate.md) for observations and remaining work.
-- Access the host over SSH and use SSH tunnels for loopback-bound administration UIs. See the [operations runbook](docs/ops-runbook.md).
-- Generate and read reports using the [GitHub monitoring guide](docs/github-monitoring.md) and [MCP guide](docs/mcp-internal-api.md). A manual run does not establish that the schedule works.
-- Explore metrics and service checks in the [playground](docs/playground.md) and [monitoring guide](docs/monitoring-notifications.md).
-- Review [backup and restore](docs/backup-restore.md): local encrypted backup and restore were tested, but an off-device copy is still missing, and observability volumes are outside the existing backup.
-- Find setup, source and historical records in the [documentation index](docs/README.md), [`stacks/`](stacks/), [`scripts/`](scripts/) and [`tests/`](tests/).
+</details>
 
-## Repository map
+## Guides
+
+| I want to… | Start here |
+| --- | --- |
+| Access or operate the hosts | [Operations runbook](docs/ops-runbook.md) · [Mac mini setup record](docs/mac-mini-kitting-record-2026-11.md) |
+| Generate or read GitHub reports | [GitHub monitoring](docs/github-monitoring.md) · [Read-only MCP](docs/mcp-internal-api.md) |
+| Explore monitoring | [Playground](docs/playground.md) · [Monitoring and notifications](docs/monitoring-notifications.md) |
+| Review recovery and changes | [Backup/restore](docs/backup-restore.md) · [Monitoring proposal](docs/prometheus-alerts-candidate.md) · [Custom OSS update candidate](docs/custom-oss-update-candidate.md) |
+| Explore offline analysis | [Security-analysis VM (JA)](docs/security-analysis-vm.md) |
+| Find setup, plans, and past results | [Documentation index](docs/README.md) |
+
+Administration UIs are loopback-bound and accessed through SSH tunnels. Follow the runbook for connection and operation details.
+
+## Recent records
+
+These links describe results on their respective dates; they are not a live inventory.
+
+| Date | Record |
+| --- | --- |
+| 2026-11-10 | [Lounge recovery and Codex subscription cutover (JA)](docs/kurotchi-lounge-codex-cutover-2026-11-10.ja.md) — manual delivery, first scheduled send/receive, synthetic read task |
+| 2026-11-09 | [Kurotchi improvements (JA)](docs/kurotchi-improvements-2026-11-09.ja.md) — branch push/CI and lounge repairs |
+| 2026-11-06 | [OpenClaw installation and limited checks (JA)](docs/openclaw-status-2026-11-06.ja.md) — browser, CLI, and lounge observations |
+
+<details>
+<summary>Repository map</summary>
 
 | Path | What is there |
 |---|---|
@@ -72,10 +124,15 @@ The custom job and MCP source differs from the public snapshot in some files. Do
 | `tests/` | Verification tests for the scripts and collectors. |
 | `schemas/` | JSON schema for security-analysis events. |
 | `experiments/` | Trial code, kept apart from the running services. |
-| `assets/` | Full-size diagram images linked from the READMEs. |
+| `assets/` | Earlier PNG/SVG diagram exports; edit the Mermaid blocks in the READMEs for the overview. |
 
-## Future direction
+</details>
+
+<details>
+<summary>Future operations and historical plans</summary>
 
 The 2026-11-01 [post-Phase-4 OpenClaw operations design](docs/home-ai-lab-openclaw-operations.md) assigns operations of Ubuntu and the now-added Mac mini to OpenClaw, with Dots responsible for construction and changes. It starts after the owner's Phase 4 and initial handover; that historical design did not verify hardware, connectivity, installation or acceptance. For subsequent installation and limited test results, use the dated record above; formal operations acceptance is still incomplete. The [pre-purchase Mac mini plan](docs/mac-mini-local-ai-plan.md) preserves the earlier M4, 16 GB and 256 GB assumptions, not a current inventory. Design approval does not authorize deployment, new communication or restarting paused jobs; the existing isolated security guest remains separate.
+
+</details>
 
 License: not yet specified.
