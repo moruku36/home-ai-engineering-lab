@@ -21,16 +21,19 @@ GitHub の作業自動化、監視、インフラ・セキュリティの実験�
 ```mermaid
 flowchart TB
   subgraph LAB["ホームラボ"]
-    direction LR
     subgraph NUC["Intel NUC · Ubuntu Server"]
       AUTO["収集・自動化<br/>n8n · python-jobs · MCP · github-history"]
       MON["監視・可視化<br/>Prometheus · Grafana · Uptime Kuma"]
       VM["隔離した KVM 解析ゲスト<br/>Workbench · REA · Ghidra<br/>仮想 NIC なし"]
+      AUTO ~~~ MON
+      MON ~~~ VM
     end
     subgraph MAC["Mac mini · macOS"]
       OC["OpenClaw · クロッチ<br/>通常 DM：Codex サブスク経路<br/>Decision：Luna API 継続"]
       CLI["Codex / Claude Code CLI<br/>限定生成を確認"]
       BROWSER["専用 Docker ブラウザ<br/>公開ページの限定試験"]
+      OC ~~~ CLI
+      CLI ~~~ BROWSER
     end
   end
   GH["GitHub<br/>API · repositories · CI"]

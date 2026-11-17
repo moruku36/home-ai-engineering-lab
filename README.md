@@ -21,16 +21,19 @@ A home lab for GitHub automation, observability, and infrastructure/security exp
 ```mermaid
 flowchart TB
   subgraph LAB["Home lab"]
-    direction LR
     subgraph NUC["Intel NUC · Ubuntu Server"]
       AUTO["Collection and automation<br/>n8n · python-jobs · MCP · github-history"]
       MON["Monitoring and dashboards<br/>Prometheus · Grafana · Uptime Kuma"]
       VM["Isolated KVM analysis guest<br/>Workbench · REA · Ghidra<br/>No virtual NIC"]
+      AUTO ~~~ MON
+      MON ~~~ VM
     end
     subgraph MAC["Mac mini · macOS"]
       OC["OpenClaw · Kurotchi<br/>Normal DM: Codex subscription<br/>Decision: Luna API retained"]
       CLI["Codex / Claude Code CLI<br/>Limited generation checks"]
       BROWSER["Dedicated Docker browser<br/>Limited public-page check"]
+      OC ~~~ CLI
+      CLI ~~~ BROWSER
     end
   end
   GH["GitHub<br/>API · repositories · CI"]
